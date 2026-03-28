@@ -45,10 +45,11 @@ ipcMain.handle('dialog:openFile', async () => {
   return fs.readFileSync(filePaths[0], 'utf-8');
 });
 
-ipcMain.handle('dialog:saveFile', async (event, csvData) => {
+ipcMain.handle('dialog:saveFile', async (event, { csvData, suggestedName }) => {
   const date = new Date().toISOString().split('T')[0];
+  const defaultName = suggestedName || `labs22-lead-engine-${date}.csv`;
   const { canceled, filePath } = await dialog.showSaveDialog({
-    defaultPath: `labs22-lead-engine-${date}.csv`,
+    defaultPath: defaultName,
     filters: [{ name: 'CSV', extensions: ['csv'] }]
   });
   if (canceled) return false;

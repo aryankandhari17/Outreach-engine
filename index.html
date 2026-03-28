@@ -15,7 +15,13 @@
     <img src="labs22_logo_final.png" style="height: 28px; border-radius: 4px; display: block;">
     <span>LEAD ENGINE</span>
   </div>
-  <div class="header-right no-drag">
+  
+  <div class="mode-switcher no-drag" style="display: flex; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 8px; border: 1px solid var(--border);">
+    <div id="modeUiux" class="mode-btn active" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace;">UI/UX & PERFORMANCE</div>
+    <div id="modeBranding" class="mode-btn" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace;">BRAND IDENTITY</div>
+  </div>
+  
+  <div class="header-right no-drag" style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
     <div class="ai-badge">GEMINI</div>
     <div id="settingsBtn" class="settings-icon">⚙</div>
   </div>
@@ -97,6 +103,7 @@
             <thead>
               <tr>
                 <th style="width: 30px;"></th>
+                <th class="sortable" data-sort="batch">Batch #</th>
                 <th class="sortable" data-sort="name">Name</th>
                 <th class="sortable" data-sort="company">Company</th>
                 <th class="sortable" data-sort="industry">Industry</th>
@@ -112,17 +119,27 @@
           </table>
         </div>
 
-        <div class="action-bar" style="padding: 12px 40px; border-top: 1px solid var(--border);">
+        <div class="action-bar" style="padding: 16px 40px; border-top: 1px solid var(--border); height: auto; min-height: 80px;">
           <div class="progress-info" style="display: flex; align-items: center; gap: 16px;">
             <div id="progressText" style="display: none; font-family: 'SF Mono', monospace; font-size: 11px;">Ready to process</div>
             <button id="stopBtn" class="primary-btn red-alert" style="display: none; height: 26px; font-size: 10px; padding: 0 12px; border-radius: 4px;">STOP PROCESSING</button>
             <div style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">5 (EXCELLENT) — 1 (CRITICAL)</div>
           </div>
-          <div class="actions" style="gap: 12px;">
+          <div class="actions" style="gap: 12px; align-items: center;">
+            <div id="batchFilterContainer" style="display: flex; align-items: center; gap: 8px; border-right: 1px solid var(--border); padding-right: 12px;">
+              <span style="font-size: 11px; color: var(--text-40);">Jump to Batch</span>
+              <select id="batchSelector" class="minimal-input" style="width: 80px; height: 32px; font-size: 12px; background: var(--panel); border: 1px solid var(--border); color: var(--text); padding: 0 4px;">
+                <option value="all">All Leads</option>
+              </select>
+            </div>
+            
             <button id="exportReadyBtn" class="outline-btn" style="padding: 6px 16px;">Export Ready</button>
-            <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid var(--border); padding-left: 12px;">
-              <input type="number" id="batchSizeInput" value="150" class="minimal-input" style="width: 50px; text-align: center; height: 32px;">
-              <button id="processNextBatchBtn" class="primary-btn" style="height: 32px; padding: 0 16px;">Process Next Batch</button>
+            <div style="display: flex; align-items: center; gap: 12px; border-left: 1px solid var(--border); padding-left: 16px;">
+              <div style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center;">
+                <span style="font-size: 8px; color: var(--accent); font-weight: 800; letter-spacing: 0.05em; margin-bottom: 2px;">RECOM: 40/DAY</span>
+                <input type="number" id="batchSizeInput" value="40" class="minimal-input" style="width: 58px; text-align: center; height: 32px; font-size: 13px; background: rgba(255,255,255,0.03);">
+              </div>
+              <button id="processNextBatchBtn" class="primary-btn" style="height: 32px; padding: 0 16px; font-size: 12px;">Process Next Batch</button>
             </div>
           </div>
         </div>
@@ -207,65 +224,59 @@
 
 <!-- Settings Modal -->
 <div id="settingsModal" class="modal">
-  <div class="modal-content">
-    <h2>Settings</h2>
+  <div class="modal-content" style="max-width: 500px; position: relative;">
+    <div id="cancelSettingsBtn" style="position: absolute; top: 16px; right: 20px; font-size: 20px; color: var(--text-40); cursor: pointer; padding: 4px; transition: color 0.2s; line-height: 1;">&times;</div>
+    <h2 style="font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 24px;">System Configuration</h2>
     
-    <div class="settings-group">
-      <label>API KEYS</label>
-      <div class="input-row">
-        <span>Gemini</span>
-        <input type="password" id="geminiKey" placeholder="Enter Gemini API Key">
+    <div class="settings-tabs" style="display: flex; gap: 20px; margin-bottom: 24px; border-bottom: 1px solid var(--border);">
+      <div id="setTabGeneral" class="app-tab active" style="padding: 10px 0; font-size: 11px; cursor: pointer;">GENERAL & AI</div>
+      <div id="setTabUiux" class="app-tab" style="padding: 10px 0; font-size: 11px; cursor: pointer;">UI/UX SENDER</div>
+      <div id="setTabBranding" class="app-tab" style="padding: 10px 0; font-size: 11px; cursor: pointer;">BRANDING SENDER</div>
+    </div>
+
+    <!-- General Settings -->
+    <div id="settingsGeneral" class="settings-pane">
+      <div class="settings-group">
+        <label>API KEYS</label>
+        <div class="input-row"><span>Gemini</span><input type="password" id="geminiKey" class="minimal-input"></div>
+        <div class="input-row"><span>Claude</span><input type="password" id="claudeKey" class="minimal-input"></div>
+        <div class="input-row"><span>OpenAI</span><input type="password" id="openaiKey" class="minimal-input"></div>
+        <div class="input-row"><span>Active AI</span>
+          <select id="activeAi" class="minimal-select"><option value="Gemini">Gemini</option><option value="Claude">Claude</option><option value="OpenAI">OpenAI</option></select>
+        </div>
+        <div class="input-row"><span>Model</span><select id="activeModel" class="minimal-select"></select></div>
       </div>
-      <div class="input-row">
-        <span>Claude</span>
-        <input type="password" id="claudeKey" placeholder="Optional for later">
-      </div>
-      <div class="input-row">
-        <span>OpenAI</span>
-        <input type="password" id="openaiKey" placeholder="Optional for later">
-      </div>
-      <div class="input-row">
-        <span>Active AI</span>
-        <select id="activeAi" class="minimal-select">
-          <option value="Gemini">Gemini</option>
-          <option value="Claude">Claude</option>
-          <option value="OpenAI">OpenAI</option>
-        </select>
-      </div>
-      <div class="input-row">
-        <span>Model Selection</span>
-        <select id="activeModel" class="minimal-select"></select>
+      <div class="settings-group">
+        <label>PROMPT CONFIGURE (Current Mode)</label>
+        <textarea id="systemPromptArea" rows="6" style="width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 12px; font-family: monospace;"></textarea>
       </div>
     </div>
 
-    <div class="settings-group">
-      <label>EMAIL SETTINGS</label>
-      <div class="input-row">
-        <span>Sender name</span>
-        <input type="text" id="senderName" placeholder="Aryan" value="Aryan">
+    <!-- UI/UX Sender Settings -->
+    <div id="settingsSenderUiux" class="settings-pane" style="display: none;">
+      <div class="settings-group">
+        <label>UI/UX PERFORMANCE OUTREACH IDENTITY</label>
+        <div class="input-row"><span>Name</span><input type="text" id="uiuxSenderName" class="minimal-input" placeholder="Aryan"></div>
+        <div class="input-row"><span>Title</span><input type="text" id="uiuxSenderTitle" class="minimal-input" placeholder="Partner, Labs22"></div>
+        <div class="input-row"><span>Website</span><input type="text" id="uiuxSenderWeb" class="minimal-input" placeholder="labs22.com"></div>
+        <div class="input-row" style="margin-top: 12px;"><span>Credibility</span><label style="display: flex; align-items: center; gap: 8px;"><input type="checkbox" id="uiuxEnoc"> ENOC / Visa Line</label></div>
       </div>
-      <div class="input-row">
-        <span>Sender title</span>
-        <input type="text" id="senderTitle" placeholder="Partner, Labs22" value="Partner, Labs22">
-      </div>
-      <div class="input-row">
-        <span>Sender website</span>
-        <input type="text" id="senderWebsite" placeholder="labs22.com" value="labs22.com">
-      </div>
-      <div class="input-row">
-        <span>Include ENOC/Visa credibility line</span>
-        <input type="checkbox" id="enocLine" checked>
-      </div>
-    </div>
-    
-    <div class="settings-group">
-      <label>SYSTEM PROMPT (Editable)</label>
-      <textarea id="systemPromptArea" rows="6"></textarea>
     </div>
 
-    <div class="modal-footer" style="justify-content: space-between;">
-      <button id="clearDataBtn" class="outline-btn red">Clear All Data</button>
-      <button id="closeSettingsBtn" class="primary-btn">Save</button>
+    <!-- Branding Sender Settings -->
+    <div id="settingsSenderBranding" class="settings-pane" style="display: none;">
+      <div class="settings-group">
+        <label>BRAND IDENTITY OUTREACH IDENTITY</label>
+        <div class="input-row"><span>Name</span><input type="text" id="brandingSenderName" class="minimal-input" placeholder="Partner's Name"></div>
+        <div class="input-row"><span>Title</span><input type="text" id="brandingSenderTitle" class="minimal-input" placeholder="Partner, Labs22"></div>
+        <div class="input-row"><span>Website</span><input type="text" id="brandingSenderWeb" class="minimal-input" placeholder="labs22.com"></div>
+        <div class="input-row" style="margin-top: 12px;"><span>Credibility</span><label style="display: flex; align-items: center; gap: 8px;"><input type="checkbox" id="brandingEnoc"> ENOC / Visa Line</label></div>
+      </div>
+    </div>
+
+    <div class="modal-footer" style="padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+      <button id="clearDataBtn" class="outline-btn red" style="color: #EF4444; border-color: rgba(239, 68, 68, 0.2); font-size: 11px;">Clear All Data</button>
+      <button id="closeSettingsBtn" class="primary-btn" style="padding: 8px 24px; font-size: 12px;">Save Changes</button>
     </div>
   </div>
 </div>
