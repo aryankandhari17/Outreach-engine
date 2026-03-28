@@ -1,0 +1,15 @@
+{
+  "name": "labs22-outreach-engine",
+  "version": "1.0.0",
+  "description": "Native Electron App for Labs22 Cold Outreach Automation",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "papaparse": "^5.4.1"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}

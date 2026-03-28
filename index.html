@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Labs22 Lead Engine</title>
+<link rel="stylesheet" href="style.css">
+<!-- Papaparse via CDN since node modules are restricted from renderer -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+
+<header class="topbar drag">
+  <div class="logo" style="display: flex; align-items: center; gap: 12px; font-size: 11px; letter-spacing: 2px;">
+    <img src="labs22_logo_final.png" style="height: 28px; border-radius: 4px; display: block;">
+    <span>LEAD ENGINE</span>
+  </div>
+  <div class="header-right no-drag">
+    <div class="ai-badge">GEMINI</div>
+    <div id="settingsBtn" class="settings-icon">⚙</div>
+  </div>
+</header>
+
+<!-- Dashboard Main -->
+<main id="dashboardView" style="display: flex; flex-direction: column; height: 100%;">
+  
+  <div class="primary-tabs no-drag" style="display: flex; gap: 40px; border-bottom: 1px solid var(--border); padding: 0 40px; background: var(--bg); z-index: 20; position: relative;">
+    <div id="tabLeads" class="app-tab active" style="padding: 16px 0; cursor: pointer; color: var(--accent); border-bottom: 2px solid var(--accent); font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace;">ALL LEADS</div>
+    <div id="tabBatch" class="app-tab" style="padding: 16px 0; cursor: pointer; color: var(--text-40); font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace;">BULK IMPORT</div>
+    <div id="tabSingle" class="app-tab" style="padding: 16px 0; cursor: pointer; color: var(--text-40); font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace;">SINGLE ENTRY</div>
+  </div>
+
+  <div id="contentArea" style="flex: 1; overflow: hidden; position: relative;">
+    
+    <!-- Combined Dashboard View (Persistent Table + Optional Input Panels) -->
+    <div id="dashboardSections" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+      
+      <!-- Batch Entry Panel (Collapsible) -->
+      <div id="batchPanel" style="display: none; padding: 30px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.01); align-items: center; justify-content: center; gap: 24px;">
+        <div class="drop-zone" id="dropZone" style="width: 440px; height: 120px;">
+          <div class="drop-icon">📄</div>
+          <p>Drop Apollo CSV here or select to upload</p>
+        </div>
+      </div>
+
+      <!-- Single Entry Panel (Collapsible) -->
+      <div id="singlePanel" style="display: none; padding: 30px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.01); align-items: center; justify-content: center;">
+        <div class="manual-entry-card" style="width: 440px; padding: 20px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; gap: 16px;">
+          <h3 style="font-size: 13px; font-weight: 500; font-family: 'SF Mono', monospace; color: var(--accent);">ADD SINGLE COMPANY</h3>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">FIRST NAME</label>
+              <input type="text" id="manualFirstName" placeholder="Aryan" class="full-input">
+            </div>
+            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">COMPANY NAME</label>
+              <input type="text" id="manualCompany" placeholder="Labs22" class="full-input">
+            </div>
+          </div>
+          <div class="input-group" style="display: flex; flex-direction: column; gap: 6px; margin-top: 12px;">
+            <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">WEBSITE URL</label>
+            <input type="text" id="manualUrl" placeholder="https://..." class="full-input">
+          </div>
+          
+          <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">LEADER EMAILS (comma separated)</label>
+            <input type="text" id="manualEmails" placeholder="aryan@labs22.com" class="full-input">
+          </div>
+          
+          <button id="manualAddBtn" class="primary-btn" style="width: 100%; justify-content: center; height: 36px; font-size: 12px;">Add to Queue</button>
+        </div>
+      </div>
+
+      <!-- Main Leads Table (Always visible here) -->
+      <div id="leadsSection" class="leads-section" style="display: flex; flex: 1; flex-direction: column; overflow: hidden;">
+        <div class="table-header" style="padding: 16px 40px; border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h3 id="importedCount" style="font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace;">0 LEADS</h3>
+            <button id="addLeadsCta" class="outline-btn" style="margin-left: 16px; padding: 4px 12px; font-size: 11px;">+ NEW LEAD</button>
+          </div>
+          <div class="filters" style="display: flex; gap: 12px;">
+            <input type="text" id="searchInput" class="minimal-input" placeholder="Search..." style="width: 160px;">
+            <select id="statusFilter" class="minimal-select">
+              <option value="All">All Statuses</option>
+              <option value="Queued">Queued</option>
+              <option value="Processing">Processing</option>
+              <option value="Ready">Ready</option>
+              <option value="Exported">Exported</option>
+              <option value="Error">Error</option>
+            </select>
+          </div>
+        </div>
+      
+        <div class="table-container" style="flex: 1; overflow-y: auto;">
+          <table id="leadsTable">
+            <thead>
+              <tr>
+                <th style="width: 30px;"></th>
+                <th class="sortable" data-sort="name">Name</th>
+                <th class="sortable" data-sort="company">Company</th>
+                <th class="sortable" data-sort="industry">Industry</th>
+                <th class="sortable" data-sort="website">Website</th>
+                <th class="sortable" data-sort="status">Status</th>
+                <th>Scores</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="leadsTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="action-bar" style="padding: 12px 40px; border-top: 1px solid var(--border);">
+          <div class="progress-info" style="display: flex; align-items: center; gap: 16px;">
+            <div id="progressText" style="display: none; font-family: 'SF Mono', monospace; font-size: 11px;">Ready to process</div>
+            <button id="stopBtn" class="primary-btn red-alert" style="display: none; height: 26px; font-size: 10px; padding: 0 12px; border-radius: 4px;">STOP PROCESSING</button>
+            <div style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">5 (EXCELLENT) — 1 (CRITICAL)</div>
+          </div>
+          <div class="actions" style="gap: 12px;">
+            <button id="exportReadyBtn" class="outline-btn" style="padding: 6px 16px;">Export Ready</button>
+            <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid var(--border); padding-left: 12px;">
+              <input type="number" id="batchSizeInput" value="150" class="minimal-input" style="width: 50px; text-align: center; height: 32px;">
+              <button id="processNextBatchBtn" class="primary-btn" style="height: 32px; padding: 0 16px;">Process Next Batch</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div> <!-- End contentArea -->
+
+  <div id="leadDetailView" class="leads-section" style="display: none; padding: 20px; flex-direction: column; height: 100%; overflow-y: auto;">
+    <button id="backFromDetailBtn" class="outline-btn" style="width: max-content; margin-bottom: 20px;">← Back</button>
+    
+    <div class="lead-info-card" style="background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <h2 id="detailCompany" style="font-size: 24px; margin-bottom: 8px;">Company Name</h2>
+          <div style="color: var(--text-70); font-size: 14px; margin-bottom: 12px;">
+            <span id="detailName">Contact Name</span> • <span id="detailEmail">email</span> • <span id="detailIndustry">Industry</span>
+          </div>
+          <button id="openWebsiteBtn" class="outline-btn" style="font-size: 12px; padding: 6px 12px;">Open Website</button>
+        </div>
+        <div id="detailStatusBadge" class="status-queued" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; display: flex; align-items: center;">
+          <span class="status-dot"></span><span id="detailStatusText">Queued</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs-header" style="display: flex; gap: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px;">
+      <div id="tabAnalysis" class="tab active" style="padding-bottom: 12px; cursor: pointer; color: var(--accent); border-bottom: 2px solid var(--accent); font-weight: 500;">Analysis</div>
+      <div id="tabEmails" class="tab" style="padding-bottom: 12px; cursor: pointer; color: var(--text-70);">View Emails</div>
+    </div>
+
+    <div id="analysisContent">
+      <div class="expert-reaction" style="margin-bottom: 24px;">
+        <div class="section-label">EXPERT REACTION</div>
+        <div id="detailReaction" style="font-size: 14px; line-height: 1.5;">...</div>
+      </div>
+      
+      <div class="pillar-scores" style="display: flex; gap: 16px; margin-bottom: 24px;">
+        <div class="score-card" style="flex: 1; background: var(--panel); border: 1px solid var(--border); padding: 16px; border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; text-align: center;">
+          <div class="section-label" style="margin-bottom: 12px;">BRAND CLARITY</div>
+          <div id="scoreBrand" style="font-size: 32px; font-weight: bold; margin-bottom: 12px; color: var(--text-95);">?</div>
+          <div id="findingBrand" style="font-size: 12px; color: var(--text-70); line-height: 1.4;">...</div>
+        </div>
+        <div class="score-card" style="flex: 1; background: var(--panel); border: 1px solid var(--border); padding: 16px; border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; text-align: center;">
+          <div class="section-label" style="margin-bottom: 12px;">TRUST SIGNALS</div>
+          <div id="scoreTrust" style="font-size: 32px; font-weight: bold; margin-bottom: 12px; color: var(--text-95);">?</div>
+          <div id="findingTrust" style="font-size: 12px; color: var(--text-70); line-height: 1.4;">...</div>
+        </div>
+        <div class="score-card" style="flex: 1; background: var(--panel); border: 1px solid var(--border); padding: 16px; border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; text-align: center;">
+          <div class="section-label" style="margin-bottom: 12px;">CONVERSION PATH</div>
+          <div id="scoreConversion" style="font-size: 32px; font-weight: bold; margin-bottom: 12px; color: var(--text-95);">?</div>
+          <div id="findingConversion" style="font-size: 12px; color: var(--text-70); line-height: 1.4;">...</div>
+        </div>
+      </div>
+
+      <div id="gapCard" class="gap-statement" style="background: rgba(232, 181, 23, 0.1); border: 1px solid rgba(232, 181, 23, 0.3); padding: 20px; border-radius: var(--radius); margin-bottom: 24px;">
+        <div id="gapLabel" class="section-label" style="color: var(--accent); margin-bottom: 8px;">GAP STATEMENT</div>
+        <div id="detailGap" style="font-size: 14px; line-height: 1.5; color: var(--text-95);">...</div>
+      </div>
+
+      <div class="quick-pointers" style="margin-bottom: 24px;">
+        <div class="section-label">QUICK POINTERS (used in Email 2)</div>
+        <div id="detailPointers" style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+          <!-- Items generated in JS -->
+        </div>
+      </div>
+    </div>
+
+    <div id="emailsContent" style="display: none;">
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+        <div class="mode-toggle" style="background: var(--panel); border: 1px solid var(--border); border-radius: 6px; display: flex; overflow: hidden;">
+          <button id="modeScale" style="background: var(--accent); color: var(--bg); border: none; padding: 6px 12px; border-radius: 0; font-size: 12px; cursor: pointer;">2-Email (Scale)</button>
+          <button id="modeVip" style="background: transparent; color: var(--text-70); border: none; padding: 6px 12px; border-radius: 0; font-size: 12px; cursor: pointer;">4-Email (VIP)</button>
+        </div>
+      </div>
+      <div id="emailCards" style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- Emails generated in JS -->
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Settings Modal -->
+<div id="settingsModal" class="modal">
+  <div class="modal-content">
+    <h2>Settings</h2>
+    
+    <div class="settings-group">
+      <label>API KEYS</label>
+      <div class="input-row">
+        <span>Gemini</span>
+        <input type="password" id="geminiKey" placeholder="Enter Gemini API Key">
+      </div>
+      <div class="input-row">
+        <span>Claude</span>
+        <input type="password" id="claudeKey" placeholder="Optional for later">
+      </div>
+      <div class="input-row">
+        <span>OpenAI</span>
+        <input type="password" id="openaiKey" placeholder="Optional for later">
+      </div>
+      <div class="input-row">
+        <span>Active AI</span>
+        <select id="activeAi" class="minimal-select">
+          <option value="Gemini">Gemini</option>
+          <option value="Claude">Claude</option>
+          <option value="OpenAI">OpenAI</option>
+        </select>
+      </div>
+      <div class="input-row">
+        <span>Model Selection</span>
+        <select id="activeModel" class="minimal-select"></select>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <label>EMAIL SETTINGS</label>
+      <div class="input-row">
+        <span>Sender name</span>
+        <input type="text" id="senderName" placeholder="Aryan" value="Aryan">
+      </div>
+      <div class="input-row">
+        <span>Sender title</span>
+        <input type="text" id="senderTitle" placeholder="Partner, Labs22" value="Partner, Labs22">
+      </div>
+      <div class="input-row">
+        <span>Sender website</span>
+        <input type="text" id="senderWebsite" placeholder="labs22.com" value="labs22.com">
+      </div>
+      <div class="input-row">
+        <span>Include ENOC/Visa credibility line</span>
+        <input type="checkbox" id="enocLine" checked>
+      </div>
+    </div>
+    
+    <div class="settings-group">
+      <label>SYSTEM PROMPT (Editable)</label>
+      <textarea id="systemPromptArea" rows="6"></textarea>
+    </div>
+
+    <div class="modal-footer" style="justify-content: space-between;">
+      <button id="clearDataBtn" class="outline-btn red">Clear All Data</button>
+      <button id="closeSettingsBtn" class="primary-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<style>.trash-btn:hover { opacity: 1 !important; transform: scale(1.1); }</style>
+<div id="deleteModal" class="modal">
+  <div class="modal-content" style="max-width: 320px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.2);">
+    <h3 style="margin-top: 0; color: #EF4444; font-size: 16px; letter-spacing: 1px;">DELETE LEAD</h3>
+    <p id="deleteModalText" style="font-size: 13px; color: var(--text-70); margin: 16px 0; line-height: 1.5;">Are you sure you want to delete this lead? This action cannot be undone.</p>
+    <div style="display: flex; gap: 12px; justify-content: center; margin-top: 24px;">
+      <button id="cancelDeleteBtn" class="outline-btn" style="flex: 1; padding: 10px;">CANCEL</button>
+      <button id="confirmDeleteBtn" class="outline-btn" style="flex: 1; border-color: #EF4444; color: #EF4444; padding: 10px;">DELETE</button>
+    </div>
+  </div>
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>
