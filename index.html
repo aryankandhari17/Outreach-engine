@@ -10,13 +10,13 @@
 </head>
 <body>
 
-<header class="topbar drag">
+<header class="topbar drag" style="position: relative;">
   <div class="logo" style="display: flex; align-items: center; gap: 12px; font-size: 11px; letter-spacing: 2px;">
     <img src="labs22_logo_final.png" style="height: 28px; border-radius: 4px; display: block;">
     <span>LEAD ENGINE</span>
   </div>
   
-  <div class="mode-switcher no-drag" style="display: flex; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 8px; border: 1px solid var(--border);">
+  <div class="mode-switcher no-drag" style="position: absolute; left: 50%; transform: translateX(-50%); display: flex; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 8px; border: 1px solid var(--border);">
     <div id="modeUiux" class="mode-btn active" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace;">UI/UX & PERFORMANCE</div>
     <div id="modeBranding" class="mode-btn" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace;">BRAND IDENTITY</div>
   </div>
@@ -29,54 +29,15 @@
 
 <!-- Dashboard Main -->
 <main id="dashboardView" style="display: flex; flex-direction: column; height: 100%;">
-  
   <div class="primary-tabs no-drag" style="display: flex; gap: 40px; border-bottom: 1px solid var(--border); padding: 0 40px; background: var(--bg); z-index: 20; position: relative;">
-    <div id="tabLeads" class="app-tab active" style="padding: 16px 0; cursor: pointer; color: var(--accent); border-bottom: 2px solid var(--accent); font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace;">ALL LEADS</div>
-    <div id="tabBatch" class="app-tab" style="padding: 16px 0; cursor: pointer; color: var(--text-40); font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace;">BULK IMPORT</div>
-    <div id="tabSingle" class="app-tab" style="padding: 16px 0; cursor: pointer; color: var(--text-40); font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace;">SINGLE ENTRY</div>
+    <div id="tabLeads" class="app-tab active" style="padding: 16px 0; cursor: pointer; color: var(--accent); border-bottom: 2px solid var(--accent); font-size: 11px; font-weight: 700; font-family: 'SF Mono', monospace; letter-spacing: 1px;">ALL LEADS</div>
+    <div id="tabBatch" class="app-tab" style="padding: 16px 0; cursor: pointer; color: var(--text-40); font-size: 11px; font-weight: 700; font-family: 'SF Mono', monospace; letter-spacing: 1px;">BULK IMPORT</div>
+    <div id="tabSingle" class="app-tab" style="padding: 16px 0; cursor: pointer; color: var(--text-40); font-size: 11px; font-weight: 700; font-family: 'SF Mono', monospace; letter-spacing: 1px;">SINGLE ENTRY</div>
   </div>
 
   <div id="contentArea" style="flex: 1; overflow: hidden; position: relative;">
-    
-    <!-- Combined Dashboard View (Persistent Table + Optional Input Panels) -->
+    <!-- Combined Dashboard View (Persistent Table) -->
     <div id="dashboardSections" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
-      
-      <!-- Batch Entry Panel (Collapsible) -->
-      <div id="batchPanel" style="display: none; padding: 30px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.01); align-items: center; justify-content: center; gap: 24px;">
-        <div class="drop-zone" id="dropZone" style="width: 440px; height: 120px;">
-          <div class="drop-icon">📄</div>
-          <p>Drop Apollo CSV here or select to upload</p>
-        </div>
-      </div>
-
-      <!-- Single Entry Panel (Collapsible) -->
-      <div id="singlePanel" style="display: none; padding: 30px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.01); align-items: center; justify-content: center;">
-        <div class="manual-entry-card" style="width: 440px; padding: 20px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; gap: 16px;">
-          <h3 style="font-size: 13px; font-weight: 500; font-family: 'SF Mono', monospace; color: var(--accent);">ADD SINGLE COMPANY</h3>
-          
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
-              <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">FIRST NAME</label>
-              <input type="text" id="manualFirstName" placeholder="Aryan" class="full-input">
-            </div>
-            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
-              <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">COMPANY NAME</label>
-              <input type="text" id="manualCompany" placeholder="Labs22" class="full-input">
-            </div>
-          </div>
-          <div class="input-group" style="display: flex; flex-direction: column; gap: 6px; margin-top: 12px;">
-            <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">WEBSITE URL</label>
-            <input type="text" id="manualUrl" placeholder="https://..." class="full-input">
-          </div>
-          
-          <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">LEADER EMAILS (comma separated)</label>
-            <input type="text" id="manualEmails" placeholder="aryan@labs22.com" class="full-input">
-          </div>
-          
-          <button id="manualAddBtn" class="primary-btn" style="width: 100%; justify-content: center; height: 36px; font-size: 12px;">Add to Queue</button>
-        </div>
-      </div>
 
       <!-- Main Leads Table (Always visible here) -->
       <div id="leadsSection" class="leads-section" style="display: flex; flex: 1; flex-direction: column; overflow: hidden;">
@@ -87,6 +48,9 @@
           </div>
           <div class="filters" style="display: flex; gap: 12px;">
             <input type="text" id="searchInput" class="minimal-input" placeholder="Search..." style="width: 160px;">
+            <select id="countryFilter" class="minimal-select">
+              <option value="All">All Countries</option>
+            </select>
             <select id="statusFilter" class="minimal-select">
               <option value="All">All Statuses</option>
               <option value="Queued">Queued</option>
@@ -103,14 +67,14 @@
             <thead>
               <tr>
                 <th style="width: 30px;"></th>
-                <th class="sortable" data-sort="batch">Batch #</th>
-                <th class="sortable" data-sort="name">Name</th>
-                <th class="sortable" data-sort="company">Company</th>
-                <th class="sortable" data-sort="industry">Industry</th>
-                <th class="sortable" data-sort="website">Website</th>
-                <th class="sortable" data-sort="status">Status</th>
-                <th>Scores</th>
-                <th>Actions</th>
+                <th class="sortable" data-sort="name"><div style="resize: horizontal; overflow: hidden; min-width: 80px; width: 120px;">Name</div></th>
+                <th class="sortable" data-sort="company"><div style="resize: horizontal; overflow: hidden; min-width: 80px; width: 150px;">Company</div></th>
+                <th class="sortable" data-sort="industry"><div style="resize: horizontal; overflow: hidden; min-width: 80px; width: 120px;">Industry</div></th>
+                <th class="sortable" data-sort="country"><div style="resize: horizontal; overflow: hidden; min-width: 60px; width: 90px;">Country</div></th>
+                <th class="sortable" data-sort="website"><div style="resize: horizontal; overflow: hidden; min-width: 80px; width: 150px;">Website</div></th>
+                <th class="sortable" data-sort="status"><div style="resize: horizontal; overflow: hidden; min-width: 70px; width: 90px;">Status</div></th>
+                <th><div style="resize: horizontal; overflow: hidden; min-width: 80px; width: 120px;">Scores</div></th>
+                <th><div style="resize: horizontal; overflow: hidden; min-width: 80px; width: 160px;">Actions</div></th>
               </tr>
             </thead>
             <tbody id="leadsTableBody">
@@ -126,20 +90,18 @@
             <div style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">5 (EXCELLENT) — 1 (CRITICAL)</div>
           </div>
           <div class="actions" style="gap: 12px; align-items: center;">
-            <div id="batchFilterContainer" style="display: flex; align-items: center; gap: 8px; border-right: 1px solid var(--border); padding-right: 12px;">
-              <span style="font-size: 11px; color: var(--text-40);">Jump to Batch</span>
-              <select id="batchSelector" class="minimal-input" style="width: 80px; height: 32px; font-size: 12px; background: var(--panel); border: 1px solid var(--border); color: var(--text); padding: 0 4px;">
-                <option value="all">All Leads</option>
-              </select>
-            </div>
-            
-            <button id="exportReadyBtn" class="outline-btn" style="padding: 6px 16px;">Export Ready</button>
-            <div style="display: flex; align-items: center; gap: 12px; border-left: 1px solid var(--border); padding-left: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
               <div style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center;">
-                <span style="font-size: 8px; color: var(--accent); font-weight: 800; letter-spacing: 0.05em; margin-bottom: 2px;">RECOM: 40/DAY</span>
+                <span style="font-size: 8px; color: var(--accent); font-weight: 800; letter-spacing: 0.05em; margin-bottom: 2px;">BATCH SIZE</span>
                 <input type="number" id="batchSizeInput" value="40" class="minimal-input" style="width: 58px; text-align: center; height: 32px; font-size: 13px; background: rgba(255,255,255,0.03);">
               </div>
-              <button id="processNextBatchBtn" class="primary-btn" style="height: 32px; padding: 0 16px; font-size: 12px;">Process Next Batch</button>
+              <!-- Jump to Batch hidden but functionality kept for batch internal logic -->
+              <select id="batchSelector" style="display: none;">
+                <option value="all">All Leads</option>
+              </select>
+              <label id="batchEnocLabel" style="display: none;"><input type="checkbox" id="batchEnocToggle"></label>
+              <button id="exportReadyBtn" style="display: none;"></button>
+              <button id="processNextBatchBtn" style="display: none;"></button>
             </div>
           </div>
         </div>
@@ -154,10 +116,13 @@
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <div>
           <h2 id="detailCompany" style="font-size: 24px; margin-bottom: 8px;">Company Name</h2>
-          <div style="color: var(--text-70); font-size: 14px; margin-bottom: 12px;">
-            <span id="detailName">Contact Name</span> • <span id="detailEmail">email</span> • <span id="detailIndustry">Industry</span>
+          <div style="color: var(--text-70); font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <span id="detailName">Contact Name</span> • <span id="detailEmail">email</span> • <span id="detailIndustry">Industry</span> • <span id="detailCountry" style="background: rgba(255, 94, 0, 0.1); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-family: 'SF Mono', monospace; font-weight: 700;">Country</span>
           </div>
-          <button id="openWebsiteBtn" class="outline-btn" style="font-size: 12px; padding: 6px 12px;">Open Website</button>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <button id="openWebsiteBtn" class="outline-btn" style="font-size: 11px; padding: 6px 16px;">Open Website</button>
+            <button id="editLeadBtn" class="outline-btn" style="font-size: 11px; padding: 6px 16px; border-color: rgba(255,255,255,0.1); color: var(--text-70);">EDIT LEAD</button>
+          </div>
         </div>
         <div id="detailStatusBadge" class="status-queued" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; display: flex; align-items: center;">
           <span class="status-dot"></span><span id="detailStatusText">Queued</span>
@@ -238,9 +203,9 @@
     <div id="settingsGeneral" class="settings-pane">
       <div class="settings-group">
         <label>API KEYS</label>
-        <div class="input-row"><span>Gemini</span><input type="password" id="geminiKey" class="minimal-input"></div>
-        <div class="input-row"><span>Claude</span><input type="password" id="claudeKey" class="minimal-input"></div>
-        <div class="input-row"><span>OpenAI</span><input type="password" id="openaiKey" class="minimal-input"></div>
+        <div class="input-row"><span>Gemini</span><input type="text" id="geminiKey" class="minimal-input"></div>
+        <div class="input-row"><span>Claude</span><input type="text" id="claudeKey" class="minimal-input"></div>
+        <div class="input-row"><span>OpenAI</span><input type="text" id="openaiKey" class="minimal-input"></div>
         <div class="input-row"><span>Active AI</span>
           <select id="activeAi" class="minimal-select"><option value="Gemini">Gemini</option><option value="Claude">Claude</option><option value="OpenAI">OpenAI</option></select>
         </div>
@@ -289,6 +254,93 @@
     <div style="display: flex; gap: 12px; justify-content: center; margin-top: 24px;">
       <button id="cancelDeleteBtn" class="outline-btn" style="flex: 1; padding: 10px;">CANCEL</button>
       <button id="confirmDeleteBtn" class="outline-btn" style="flex: 1; border-color: #EF4444; color: #EF4444; padding: 10px;">DELETE</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal for Adding Leads -->
+<div id="addLeadModal" class="modal">
+  <div class="modal-content" style="max-width: 500px; padding: 0;">
+    <div style="padding: 24px; border-bottom: 1px solid var(--border); position: relative; display: flex; align-items: center; justify-content: space-between;">
+      <h2 style="font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin: 0;">Add Leads</h2>
+      <div id="closeAddLeadModalBtn" style="font-size: 20px; color: var(--text-40); cursor: pointer; padding: 4px; transition: color 0.2s; line-height: 1;">&times;</div>
+    </div>
+    
+    <div style="display: flex; gap: 40px; border-bottom: 1px solid var(--border); padding: 0 24px;">
+      <div id="tabAddBulk" class="app-tab active" style="padding: 16px 0; cursor: pointer; color: var(--accent); border-bottom: 2px solid var(--accent); font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace;">BULK IMPORT</div>
+      <div id="tabAddSingle" class="app-tab" style="padding: 16px 0; cursor: pointer; color: var(--text-40); font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace;">SINGLE ENTRY</div>
+    </div>
+    
+    <div style="padding: 24px;">
+      <!-- Batch Entry Panel -->
+      <div id="modalBatchPanel" style="display: flex; align-items: center; justify-content: center;">
+        <div class="drop-zone" id="dropZone" style="width: 100%; height: 160px;">
+          <div class="drop-icon">📄</div>
+          <p>Drop Apollo CSV here</p>
+        </div>
+      </div>
+
+      <!-- Single Entry Panel -->
+      <div id="modalSinglePanel" style="display: none;">
+        <div class="manual-entry-card" style="width: 100%; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">FIRST NAME</label>
+              <input type="text" id="manualFirstName" placeholder="Aryan" class="full-input">
+            </div>
+            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">COMPANY NAME</label>
+              <input type="text" id="manualCompany" placeholder="Labs22" class="full-input">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">WEBSITE URL</label>
+              <input type="text" id="manualUrl" placeholder="https://..." class="full-input">
+            </div>
+            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">COUNTRY (Optional)</label>
+              <input type="text" id="manualCountry" placeholder="e.g. UK, Australia..." class="full-input">
+            </div>
+          </div>
+          
+          <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">LEADER EMAILS (comma separated)</label>
+            <input type="text" id="manualEmails" placeholder="aryan@labs22.com" class="full-input">
+          </div>
+          
+          <button id="manualAddBtn" class="primary-btn" style="width: 100%; justify-content: center; height: 36px; font-size: 12px; margin-top: 8px;">Add to Queue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Lead Modal -->
+<div id="editLeadModal" class="modal">
+  <div class="modal-content" style="max-width: 400px; padding: 0;">
+    <div style="padding: 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+      <h2 style="font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin: 0;">Edit Lead</h2>
+      <div id="closeEditModalBtn" style="font-size: 20px; color: var(--text-40); cursor: pointer; padding: 4px; transition: color 0.2s; line-height: 1;">&times;</div>
+    </div>
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+      <div class="input-group">
+        <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">FIRST NAME</label>
+        <input type="text" id="editFirstName" class="full-input">
+      </div>
+      <div class="input-group">
+        <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">COMPANY NAME</label>
+        <input type="text" id="editCompany" class="full-input">
+      </div>
+      <div class="input-group">
+        <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">EMAIL</label>
+        <input type="text" id="editEmail" class="full-input">
+      </div>
+      <div class="input-group">
+        <label style="font-size: 10px; color: var(--text-40); font-family: 'SF Mono', monospace;">COUNTRY</label>
+        <input type="text" id="editCountry" class="full-input" placeholder="UK, Australia, UAE...">
+      </div>
+      <button id="saveEditBtn" class="primary-btn" style="width: 100%; justify-content: center; height: 36px; font-size: 12px; margin-top: 8px;">Save Changes</button>
     </div>
   </div>
 </div>

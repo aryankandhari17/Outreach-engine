@@ -1,7 +1,7 @@
 :root {
   --bg: #0A0A0B;
   --panel: rgba(255, 255, 255, 0.03);
-  --accent: #E8B517;
+  --accent: #FF5E00;
   --text-95: rgba(255, 255, 255, 0.95);
   --text-70: rgba(255, 255, 255, 0.70);
   --text-40: rgba(255, 255, 255, 0.40);
@@ -138,14 +138,20 @@ main {
 table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: auto;
 }
 
 th, td {
-  padding: 12px 20px;
+  padding: 12px 16px;
   text-align: left;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
   font-size: 13px;
   white-space: nowrap;
+}
+
+th:last-child, td:last-child {
+  border-right: none;
 }
 
 th {
@@ -156,6 +162,12 @@ th {
   font-family: "SF Mono", monospace;
   font-weight: normal;
   font-size: 11px;
+  min-width: 60px;
+  z-index: 10;
+}
+
+::-webkit-resizer {
+  display: none;
 }
 
 tr:hover {
@@ -168,6 +180,9 @@ tr:hover {
   height: 6px;
   border-radius: 50%;
   margin-right: 8px;
+}
+.dashboard-row:hover .hover-exported-tag {
+  opacity: 1 !important;
 }
 .status-queued { color: var(--text-70); }
 .status-queued .status-dot { background: var(--text-40); }
