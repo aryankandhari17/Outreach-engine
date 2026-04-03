@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const http = require('http');
+const zlib = require('zlib');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -79,32 +80,81 @@ ipcMain.handle('scrape:url', async (event, urlStr) => {
       target = 'https://' + target;
     }
     const html = await fetchHtml(target);
-    const text = html
+
+    // Extract structured metadata (always present even on JS-rendered sites)
+    const getMeta = (name) => {
+      const m = html.match(new RegExp(`<meta[^>]+(?:name|property)=["']${name}["'][^>]+content=["']([^"']+)["']`, 'i'))
+                || html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["']${name}["']`, 'i'));
+      return m ? m[1].trim() : '';
+    };
+    const title = (html.match(/<title[^>]*>([^<]+)<\/title>/i) || [])[1] || '';
+    const desc = getMeta('description') || getMeta('og:description');
+    const ogTitle = getMeta('og:title');
+    const ogSiteName = getMeta('og:site_name');
+
+    // Extract JSON-LD structured data (rich product/org info)
+    const jsonLdBlocks = [];
+    const jsonLdRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let jm;
+    while ((jm = jsonLdRe.exec(html)) !== null && jsonLdBlocks.length < 3) {
+      try { jsonLdBlocks.push(JSON.stringify(JSON.parse(jm[1]))); } catch(e) {}
+    }
+
+    // Strip scripts/styles and get visible body text
+    const bodyText = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-    return text.substring(0, 3000);
+
+    const meta = [
+      title && `Title: ${title}`,
+      ogTitle && ogTitle !== title && `OG Title: ${ogTitle}`,
+      ogSiteName && `Site Name: ${ogSiteName}`,
+      desc && `Description: ${desc}`,
+      jsonLdBlocks.length && `Structured Data: ${jsonLdBlocks.join(' | ')}`
+    ].filter(Boolean).join('\n');
+
+    const combined = (meta ? meta + '\n\n' : '') + bodyText;
+    return combined.substring(0, 6000);
   } catch (error) {
     console.error('Scrape error:', error);
     return null;
   }
 });
 
-function fetchHtml(url) {
+function fetchHtml(url, redirectCount = 0) {
+  if (redirectCount > 5) return Promise.reject(new Error('Too many redirects'));
   return new Promise((resolve, reject) => {
     const client = url.startsWith('https') ? https : http;
-    const req = client.get(url, { rejectUnauthorized: false }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return resolve(fetchHtml(res.headers.location.startsWith('http') ? res.headers.location : new URL(res.headers.location, url).href));
+    const options = {
+      rejectUnauthorized: false,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate',
+        'Connection': 'keep-alive'
       }
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => resolve(data));
+    };
+    const req = client.get(url, options, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        const next = res.headers.location.startsWith('http') ? res.headers.location : new URL(res.headers.location, url).href;
+        res.resume();
+        return resolve(fetchHtml(next, redirectCount + 1));
+      }
+      const encoding = res.headers['content-encoding'];
+      let stream = res;
+      if (encoding === 'gzip') stream = res.pipe(zlib.createGunzip());
+      else if (encoding === 'deflate') stream = res.pipe(zlib.createInflate());
+      const chunks = [];
+      stream.on('data', chunk => chunks.push(chunk));
+      stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+      stream.on('error', reject);
     });
     req.on('error', reject);
-    req.setTimeout(10000, () => {
+    req.setTimeout(15000, () => {
       req.destroy();
       reject(new Error('Timeout'));
     });

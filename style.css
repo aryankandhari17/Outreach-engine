@@ -199,6 +199,8 @@ tr:hover {
 .status-exported .status-dot { background: #8B5CF6; }
 .status-error { color: #EF4444; }
 .status-error .status-dot { background: #EF4444; }
+.status-skipped { color: #6B7280; }
+.status-skipped .status-dot { background: #6B7280; }
 
 .action-bar {
   padding: 16px 20px;
@@ -439,3 +441,4 @@ textarea {
   outline: none;
   border-color: var(--accent);
 }
+.hover-white:hover { color: #FFFFFF !important; opacity: 1 !important; }
