@@ -132,8 +132,11 @@
           <div style="color: var(--text-70); font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
             <span id="detailName">Contact Name</span> • <span id="detailEmail">email</span> • <span id="detailIndustry">Industry</span> • <span id="detailCountry" style="background: rgba(255, 94, 0, 0.1); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-family: 'SF Mono', monospace; font-weight: 700;">Country</span>
           </div>
-          <div style="display: flex; gap: 12px; align-items: center;">
-            <button id="openWebsiteBtn" class="outline-btn" style="font-size: 11px; padding: 6px 16px;">Open Website</button>
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <div id="leadWebsiteLink" class="website-link no-drag" style="display: flex; align-items: center; gap: 6px; cursor: pointer; border-bottom: 1px solid rgba(255, 94, 0, 0.2); padding-bottom: 2px; width: max-content; transition: all 0.2s;">
+              <span id="detailWebsiteText" style="font-size: 13px; color: var(--accent); font-weight: 600; letter-spacing: 0.3px;">Website URL</span>
+              <svg style="width:14px;height:14px; color:var(--accent); stroke-width:3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+            </div>
             <button id="editLeadBtn" class="outline-btn" style="font-size: 11px; padding: 6px 16px; border-color: rgba(255,255,255,0.1); color: var(--text-70);">EDIT LEAD</button>
           </div>
         </div>

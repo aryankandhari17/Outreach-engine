@@ -58,17 +58,37 @@ ipcMain.handle('dialog:saveFile', async (event, { csvData, suggestedName }) => {
   return true;
 });
 
+// Leads are saved to a visible /data folder inside the project directory.
+// A .backup.json is kept from the previous save so no data is ever silently lost.
+const DATA_DIR = path.join(__dirname, 'data');
+const LEADS_FILE = path.join(DATA_DIR, 'leads.json');
+const LEADS_BACKUP = path.join(DATA_DIR, 'leads.backup.json');
+
 ipcMain.handle('state:save', async (event, data) => {
-  const userDataPath = app.getPath('userData');
-  const filePath = path.join(userDataPath, 'leads_state.json');
-  fs.writeFileSync(filePath, JSON.stringify(data), 'utf-8');
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  // Rotate current save to backup before overwriting
+  if (fs.existsSync(LEADS_FILE)) fs.copyFileSync(LEADS_FILE, LEADS_BACKUP);
+  fs.writeFileSync(LEADS_FILE, JSON.stringify(data, null, 2), 'utf-8');
 });
 
 ipcMain.handle('state:load', async () => {
-  const userDataPath = app.getPath('userData');
-  const filePath = path.join(userDataPath, 'leads_state.json');
-  if (fs.existsSync(filePath)) {
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  // app.getPath('userData') must be called inside the handler (app is ready by then)
+  const LEGACY_FILE = path.join(app.getPath('userData'), 'leads_state.json');
+  // Try primary file first, then backup, then legacy userData path
+  for (const filePath of [LEADS_FILE, LEADS_BACKUP, LEGACY_FILE]) {
+    if (fs.existsSync(filePath)) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        if (Array.isArray(parsed)) {
+          // If loaded from backup or legacy, migrate to primary location
+          if (filePath !== LEADS_FILE) {
+            if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+            fs.writeFileSync(LEADS_FILE, JSON.stringify(parsed, null, 2), 'utf-8');
+          }
+          return parsed;
+        }
+      } catch (e) { /* file corrupted, try next */ }
+    }
   }
   return null;
 });

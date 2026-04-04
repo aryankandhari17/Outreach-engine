@@ -280,6 +280,13 @@ button:hover { opacity: 0.9; }
   background: transparent;
   color: var(--text-95);
   border: 1px solid var(--border);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.outline-btn.copied {
+  background: #10B981 !important;
+  color: #FFFFFF !important;
+  border-color: #10B981 !important;
+  transform: scale(1.05);
 }
 
 .outline-btn.red {
@@ -440,5 +447,9 @@ textarea {
 .full-input:focus {
   outline: none;
   border-color: var(--accent);
+}
+.website-link:hover {
+  opacity: 0.8 !important;
+  border-bottom-color: var(--accent) !important;
 }
 .hover-white:hover { color: #FFFFFF !important; opacity: 1 !important; }
