@@ -12,7 +12,8 @@
     "batch": 1,
     "mode": "uiux",
     "month": "March 2026",
-    "addedAt": "2026-03-01T00:00:00.000Z"
+    "addedAt": "2026-03-01T00:00:00.000Z",
+    "campaign": "Manual"
   },
   {
     "firstName": "aryan",
@@ -27,7 +28,8 @@
     "batch": 1,
     "mode": "uiux",
     "month": "March 2026",
-    "addedAt": "2026-03-01T00:00:00.000Z"
+    "addedAt": "2026-03-01T00:00:00.000Z",
+    "campaign": "Manual"
   },
   {
     "firstName": "na",
@@ -95,7 +97,8 @@
     "addedAt": "2026-03-27T09:07:48.609Z",
     "batch": 1,
     "mode": "uiux",
-    "month": "March 2026"
+    "month": "March 2026",
+    "campaign": "Manual"
   },
   {
     "firstName": "Aryan",
@@ -159,7 +162,8 @@
     "addedAt": "2026-03-28T09:38:21.043Z",
     "batch": 1,
     "mode": "uiux",
-    "month": "March 2026"
+    "month": "March 2026",
+    "campaign": "Manual"
   },
   {
     "firstName": "dfa",
@@ -221,7 +225,8 @@
       "e2b": "Hi dfa,\n\nFollowing up on my note — a couple of ideas that might be worth exploring:\n\n• Adding a short line near the hero that names a specific compliance headache farmers face — like 'manage WHS audits without the paperwork' or 'stay compliant with chemical handling regulations' — would instantly help visitors understand why they need this beyond 'safety culture'\n• The commodity pages do a good job framing different farming contexts, but adding one concrete example of a typical outcome on the homepage — like 'dairy farmers reduce incident reporting time by 60%' or 'grain operations pass audits first time' — would make the value feel more tangible\n• The features section is thorough but quite long — highlighting one or two most-used features with a brief outcome statement ('Inductions: onboard contractors in 5 minutes instead of an hour') would help first-time visitors quickly grasp the practical impact before exploring the full list\n\nThese aren't big overhauls — more the kind of refinements that tend to shift how visitors engage with a site that already has a solid foundation.\n\n— Aryan\nPartner, Labs22\nlabs22.com",
       "e3s": "Re: quick thoughts",
       "e3b": "Hi dfa,\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — helping companies with strong foundations get even more out of their websites.\n\nOut of curiosity, is improving the website experience part of your roadmap this year?\n\n— Aryan"
-    }
+    },
+    "campaign": "Manual"
   },
   {
     "firstName": "Evan",
@@ -271,7 +276,8 @@
     "sequence": {
       "e1s": "Nicely done, evanshoes",
       "e1b": "Hi Evan,\n\nI came across Evans Shoes while looking at Australian footwear retailers — the range is impressive, with 50+ brands from Birkenstock to Django & Juliette to Tony Bianco, and the category navigation makes it easy to find what you're after.\n\nHere's what stood out: the way the navigation breaks down by brand, style, and fit type (regular, narrow, soft footbed) shows real thought about how different customers actually shop for shoes — most multi-brand retailers just dump everything into one grid, but this lets someone who knows they need a narrow fit or soft footbed find what works for them immediately.\n\nWe're a design consultancy that takes the same science-first approach to UX — decisions backed by how people actually behave, not just what looks good. So when we see it done well, we notice.\n\nIf you ever need an extra pair of hands on a project, we'd enjoy working with a team that thinks this way.\n\n— Aryan\nPartner, Labs22\nlabs22.com"
-    }
+    },
+    "campaign": "Manual"
   },
   {
     "firstName": "kafsjfd",
@@ -333,7 +339,8 @@
       "e2b": "Hi kafsjfd,\n\nFollowing up on my note — here are a few things I noticed:\n\n• Adding one line under the hero specifying which types of apps typically use Gumnut — project management tools, design platforms, enterprise CRMs — would immediately help developers assess whether this fits their use case without needing to read case studies first\n• The homepage shows what Gumnut enables but showing a before/after code snippet or even a 3-step visual of what 'in minutes' actually means would make the implementation promise much more concrete and credible for technical decision-makers\n• The case studies section titles are helpful but adding one client logo or company name on the homepage — even just one recognizable brand using Gumnut in production — would significantly boost credibility for developers evaluating whether this infrastructure is production-ready\n\nThese are the kinds of small changes that tend to shift how visitors perceive a business — not a redesign, but targeted refinements that make the difference between someone browsing and someone reaching out.\n\n— Aryan\nPartner, Labs22\nlabs22.com",
       "e3s": "Re: quick thoughts",
       "e3b": "Hi kafsjfd,\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — making sure websites convert visitors into customers as effectively as the business deserves.\n\nIf this is ever relevant, happy to exchange notes.\n\n— Aryan"
-    }
+    },
+    "campaign": "Manual"
   },
   {
     "firstName": "kafsjfd",
@@ -394,7 +401,8 @@
       "e2b": "Hi kafsjfd,\n\nFollowing up on my note — here are a few things I noticed:\n\n• Adding a short line early on specifying which types of companies you typically help — tech brands, consumer companies, government agencies — would instantly tell visitors whether your services match their needs before they read through the full service list\n• The 'CAPTIVATION IS CRUCIAL' section does a good job framing the problem content faces online, but backing up the claim about making content that works with one specific example of a campaign outcome would make the statement feel less theoretical and more credible\n• The 'BETTER TOGETHER' section mentions media reach and strategic partnerships but showing one concrete example of how that reach translated into results for a client would help visitors understand the tangible value of working with a team that has newsroom experience\n\nThese are the kinds of small changes that tend to shift how visitors perceive a business — not a redesign, but targeted refinements that make the difference between someone browsing and someone reaching out.\n\n— Aryan\nPartner, Labs22\nlabs22.com",
       "e3s": "Re: quick thoughts",
       "e3b": "Hi kafsjfd,\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — making sure websites convert visitors into customers as effectively as the business deserves.\n\nIf this is ever relevant, happy to exchange notes.\n\n— Aryan"
-    }
+    },
+    "campaign": "Manual"
   },
   {
     "firstName": "kafsjfd",
@@ -442,7 +450,8 @@
       "e2b": "Hi kafsjfd,\n\nFollowing up on my note — here are a few things I noticed:\n\n• The hero section says 'healthy, delicious burgers' but a visitor has to scroll to multiple sections to understand what that means — adding one concrete detail upfront like 'grass-fed beef, wholemeal buns, no preservatives' would immediately communicate the difference\n• The 'Real Nutrition' section mentions locally sourced produce and no hidden nasties but showing a side-by-side ingredient comparison with a typical fast food burger would make the health claim tangible instead of aspirational\n• The sustainability page talks about doing right by the planet but the homepage doesn't surface any of the specific commitments — mentioning one concrete action like 'carbon neutral restaurants' or 'plastic-free packaging' on the main page would give health-conscious visitors another reason to choose Grill'd\n\nThese are the kinds of small changes that tend to shift how visitors perceive a business — not a redesign, but targeted refinements that make the difference between someone browsing and someone reaching out.\n\n— Aryan\nPartner, Labs22\nlabs22.com",
       "e3s": "Re: quick thoughts",
       "e3b": "Hi kafsjfd,\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — making sure websites convert visitors into customers as effectively as the business deserves.\n\nIf this is ever relevant, happy to exchange notes.\n\n— Aryan"
-    }
+    },
+    "campaign": "Manual"
   },
   {
     "firstName": "kafsjfd",
@@ -490,7 +499,8 @@
       "e2b": "Hi kafsjfd,\n\nFollowing up on my note — here are a few things I noticed:\n\n• Adding a short positioning statement near the top of the homepage explaining what makes The Pool Tile Co different would help visitors understand why they should spend time browsing your extensive catalog rather than a competitor's\n• Including a small section with a few completed pool projects or customer testimonials on the homepage would build immediate trust and show what's possible with your products rather than just listing materials\n• The product navigation is comprehensive but visitors new to pool finishing might not know where to start — adding a brief 'How to get started' section or decision guide on the homepage would help convert browsers who feel overwhelmed by choice\n\nThese are the kinds of small changes that tend to shift how visitors perceive a business — not a redesign, but targeted refinements that make the difference between someone browsing and someone reaching out.\n\n— Aryan\nPartner, Labs22\nlabs22.com",
       "e3s": "Re: quick thoughts",
       "e3b": "Hi kafsjfd,\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — making sure websites convert visitors into customers as effectively as the business deserves.\n\nIf this is ever relevant, happy to exchange notes.\n\n— Aryan"
-    }
+    },
+    "campaign": "Manual"
   },
   {
     "firstName": "kafsjfd",
@@ -538,7 +548,8 @@
       "e2b": "Hi kafsjfd,\n\nFollowing up on my note — here are a few things I noticed:\n\n• The hero phrase 'labour-intensive and project-based workforces' is broad enough to cover construction, healthcare, hospitality, and more — naming one or two primary industries up front would help visitors immediately recognise themselves as the right customer.\n• The four customer quotes are strong but they come from quite different contexts — a trades recruiter, a care provider, a staffing agency, and a director — which reinforces the 'who is this really for' confusion rather than resolving it.\n• Adding a short line near the top that describes the typical company using Xemplo — for example, size, industry, or the specific compliance pain they're solving — would give a first-time visitor a faster way to decide whether to keep reading or book a demo.\n\nThese are the kinds of small changes that tend to shift how visitors perceive a business — not a redesign, but targeted refinements that make the difference between someone browsing and someone reaching out.\n\n— Aryan\nPartner, Labs22\nlabs22.com",
       "e3s": "Re: quick thoughts",
       "e3b": "Hi kafsjfd,\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — making sure websites convert visitors into customers as effectively as the business deserves.\n\nIf this is ever relevant, happy to exchange notes.\n\n— Aryan"
-    }
+    },
+    "campaign": "Manual"
   },
   {
     "firstName": "kafsjfd",
@@ -584,7 +595,8 @@
       "e1b": "Hi kafsjfd,\n\nI came across Rely while looking at HR compliance and workplace integrity platforms in Australia, and noticed the positioning around being an all-in-one case management system trusted by hundreds of organisations across sectors like aged care, finance, and sport.\n\nYour site is cleaner than most in your space, which is rare. But even well-built sites usually have 2-3 refinements that shift them from \"good\" to \"the one visitors remember.\"\n\nIf that's ever useful to explore, happy to share what we'd look at. No obligation.\n\n— Aryan\nPartner, Labs22\nlabs22.com",
       "e2s": "Re: dsklgj's site",
       "e2b": "Hi kafsjfd,\n\nFollowing up on my note.\n\nWe focus on UX and digital experience design — making sure the website works as hard as the business behind it.\n\nFor companies with a solid foundation like yours, small refinements tend to have an outsized impact on how visitors engage and convert.\n\nIf this is ever relevant, happy to chat. If not, no worries at all.\n\n— Aryan\nPartner, Labs22\nlabs22.com"
-    }
+    },
+    "campaign": "Manual"
   },
   {
     "firstName": "kafsjfd",
@@ -646,7 +658,8 @@
       "e3s": "Re: quick thoughts",
       "e3b": "Hi kafsjfd,\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — making sure websites convert visitors into customers as effectively as the business deserves.\n\nIf this is ever relevant, happy to exchange notes.\n\n— Aryan"
     },
-    "errorMsg": "API error undefined: undefined"
+    "errorMsg": "API error undefined: undefined",
+    "campaign": "Manual"
   },
   {
     "firstName": "kafsjfd",
@@ -683,6 +696,7 @@
       "e2b": "Hi kafsjfd,\n\nFollowing up on my note — here are a few things I noticed:\n\n• A signature visual system for the Arabica messaging — where the bean origin, roast profile, and brewing method are communicated consistently across menu boards, cups, and in-store materials — would position Tan as the specialty choice rather than just another coffee option\n• Bringing the India story into the brand more deliberately — whether that's through local sourcing partnerships, regional coffee education, or celebrating Indian coffee culture — would give the chain a distinct identity that international brands can't replicate\n• A cohesive brand identity across all touchpoints — from the storefront signage to the packaging to the digital presence — would build the kind of visual consistency that makes customers choose you by instinct when they're deciding between three coffee shops on the same street\n\nThese are the kinds of refinements that shift how customers perceive a brand — not a full redesign, but targeted changes that make the difference between being considered and being chosen.\n\n— Nitya\nPartner, Labs22\nlabs22.com",
       "e3s": "Re: quick thoughts",
       "e3b": "Hi kafsjfd,\n\nJust nudging this in case it got buried.\n\nWe specialise in brand identity and packaging design — making sure companies look as good as the product or service they actually deliver.\n\nIf this is ever relevant, happy to exchange notes.\n\n— Nitya"
-    }
+    },
+    "campaign": "Manual"
   }
 ]

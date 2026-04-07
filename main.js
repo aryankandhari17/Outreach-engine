@@ -43,7 +43,10 @@ ipcMain.handle('dialog:openFile', async () => {
     filters: [{ name: 'CSV', extensions: ['csv'] }]
   });
   if (canceled) return null;
-  return fs.readFileSync(filePaths[0], 'utf-8');
+  const filePath = filePaths[0];
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const fileName = require('path').basename(filePath);
+  return { content, fileName };
 });
 
 ipcMain.handle('dialog:saveFile', async (event, { csvData, suggestedName }) => {

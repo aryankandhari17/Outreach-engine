@@ -9,20 +9,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 </head>
 <body>
-<div id="monthSidebarOverlay" class="no-drag" style="display:none; position:fixed; top:52px; bottom:0; left:0; width:260px; background:#0A0A0B; border-right:1px solid var(--border); z-index:1000; box-shadow:10px 0 40px rgba(0,0,0,0.8); flex-direction:column;">
-  <div style="padding:20px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-    <span style="font-size:10px; font-family:'SF Mono', monospace; font-weight:700; color:var(--text-40); letter-spacing:1px;">CAMPAIGN BUCKETS</span>
-    <button id="closeSidebarBtn" class="hover-white" style="background:transparent; border:none; color:var(--text-40); cursor:pointer; font-size:14px; transition:color 0.2s;">✕</button>
-  </div>
-  <div id="monthListContainer" style="flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:4px;">
-    <!-- Populated by JS -->
-  </div>
-</div>
 
 <header class="topbar drag" style="position: relative;">
   <div class="logo no-drag" style="display: flex; align-items: center; gap: 12px; font-size: 11px; letter-spacing: 2px;">
-    <div id="hamburgerBtn" class="hover-white" style="cursor:pointer; display:flex; align-items:center; opacity:0.7; transition:opacity 0.2s; padding-right:12px; border-right:1px solid var(--border);">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"></path></svg>
+    <div id="sidebarToggleBtn" class="no-drag" style="cursor:pointer; display:flex; align-items:center; opacity:0.6; transition:opacity 0.2s; padding-right:12px; border-right:1px solid var(--border);" title="Toggle sidebar">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
     </div>
     <img src="labs22_logo_final.png" style="height: 28px; border-radius: 4px; display: block; pointer-events:none;">
     <span>LEAD ENGINE</span>
@@ -32,6 +23,7 @@
   <div class="mode-switcher no-drag" style="position: absolute; left: 50%; transform: translateX(-50%); display: flex; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 8px; border: 1px solid var(--border);">
     <div id="modeUiux" class="mode-btn active" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace;">UI/UX & PERFORMANCE</div>
     <div id="modeBranding" class="mode-btn" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace;">BRAND IDENTITY</div>
+    <div id="modePersonal" class="mode-btn" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace;">PERSONAL</div>
   </div>
   
   <div class="header-right no-drag" style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
@@ -40,13 +32,24 @@
   </div>
 </header>
 
-<!-- Dashboard Main -->
-<main id="dashboardView" style="display: flex; flex-direction: column; height: 100%;">
-  <div class="primary-tabs no-drag" style="display: flex; gap: 40px; border-bottom: 1px solid var(--border); padding: 0 40px; background: var(--bg); z-index: 20; position: relative;">
-    <div id="tabLeads" class="app-tab active" style="padding: 16px 0; cursor: pointer; color: var(--accent); border-bottom: 2px solid var(--accent); font-size: 11px; font-weight: 700; font-family: 'SF Mono', monospace; letter-spacing: 1px;">ALL LEADS</div>
-    <div id="tabBatch" class="app-tab" style="padding: 16px 0; cursor: pointer; color: var(--text-40); font-size: 11px; font-weight: 700; font-family: 'SF Mono', monospace; letter-spacing: 1px;">BULK IMPORT</div>
-    <div id="tabSingle" class="app-tab" style="padding: 16px 0; cursor: pointer; color: var(--text-40); font-size: 11px; font-weight: 700; font-family: 'SF Mono', monospace; letter-spacing: 1px;">SINGLE ENTRY</div>
+<!-- App Body: Sidebar + Dashboard -->
+<div id="appBody">
+
+  <!-- Persistent Campaign Sidebar -->
+  <div id="campaignSidebar">
+    <div class="sidebar-inner">
+      <div style="padding:14px 16px 12px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:10px; font-family:'SF Mono',monospace; font-weight:700; color:var(--text-40); letter-spacing:1px;">CAMPAIGNS</span>
+        <button id="newCampaignBtn" title="New campaign" style="background:transparent; border:1px solid rgba(255,255,255,0.12); border-radius:5px; color:var(--text-70); font-size:14px; line-height:1; width:24px; height:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; padding:0;">+</button>
+      </div>
+      <div id="campaignListContainer" style="flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:2px;">
+        <!-- Populated by JS -->
+      </div>
+    </div>
   </div>
+
+<!-- Dashboard Main -->
+<main id="dashboardView" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
 
   <div id="contentArea" style="flex: 1; overflow: hidden; position: relative;">
     <!-- Combined Dashboard View (Persistent Table) -->
@@ -59,12 +62,17 @@
             <h3 id="importedCount" style="font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace;">0 LEADS</h3>
             <button id="addLeadsCta" class="outline-btn" style="margin-left: 16px; padding: 4px 12px; font-size: 11px;">+ NEW LEAD</button>
           </div>
-          <div class="filters" style="display: flex; gap: 12px;">
-            <input type="text" id="searchInput" class="minimal-input" placeholder="Search..." style="width: 160px;">
-            <select id="countryFilter" class="minimal-select">
+          <div class="filters" style="display: flex; gap: 8px;">
+            <input type="text" id="searchInput" class="minimal-input" placeholder="Search..." style="width: 150px;">
+            <select id="sourceFilter" class="minimal-select" style="width: 110px;">
+              <option value="All">All Sources</option>
+              <option value="manual">Single Entry</option>
+              <option value="batch">Bulk Import</option>
+            </select>
+            <select id="countryFilter" class="minimal-select" style="width: 110px;">
               <option value="All">All Countries</option>
             </select>
-            <select id="statusFilter" class="minimal-select">
+            <select id="statusFilter" class="minimal-select" style="width: 110px;">
               <option value="All">All Statuses</option>
               <option value="Queued">Queued</option>
               <option value="Processing">Processing</option>
@@ -120,6 +128,43 @@
         </div>
       </div>
     </div>
+
+    <!-- Personal Tab Table Section -->
+    <div id="personalSection" style="display:none; flex-direction:column; height:100%; overflow:hidden;">
+      <div class="table-header" style="padding:16px 40px; border-bottom:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <h3 id="personalLeadCount" style="font-size:13px; font-weight:600; font-family:'SF Mono',monospace;">0 LEADS</h3>
+          <button id="addPersonalLeadBtn" class="outline-btn" style="margin-left:16px; padding:4px 12px; font-size:11px;">+ NEW LEAD</button>
+        </div>
+        <div class="filters" style="display:flex; gap:12px;">
+          <input type="text" id="personalSearchInput" class="minimal-input" placeholder="Search..." style="width:160px;">
+          <select id="personalStatusFilter" class="minimal-select">
+            <option value="All">All Statuses</option>
+            <option value="Draft">Draft</option>
+            <option value="Ready">Ready</option>
+            <option value="Sent">Sent</option>
+            <option value="Replied">Replied</option>
+            <option value="No Response">No Response</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-container" style="flex:1; overflow-y:auto;">
+        <table id="personalTable">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Contact Name</th>
+              <th>Contact Email</th>
+              <th>Relationship</th>
+              <th>Website</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="personalTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div> <!-- End contentArea -->
 
   <div id="leadDetailView" class="leads-section" style="display: none; padding: 20px; flex-direction: column; height: 100%; overflow-y: auto;">
@@ -173,6 +218,15 @@
           <div id="scoreConversion" style="font-size: 32px; font-weight: bold; margin-bottom: 12px; color: var(--text-95);">?</div>
           <div id="findingConversion" style="font-size: 12px; color: var(--text-70); line-height: 1.4;">...</div>
         </div>
+        <div id="tierCard" class="score-card" style="flex: 0 0 120px; background: var(--panel); border: 1px solid var(--border); padding: 16px; border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; text-align: center;">
+          <div class="section-label" style="margin-bottom: 12px;">CURRENT STATE</div>
+          <div id="tierBars" style="display: flex; align-items: flex-end; gap: 4px; height: 32px; margin-bottom: 12px;">
+            <div style="width: 8px; height: 10px; background: var(--border); border-radius: 2px;"></div>
+            <div style="width: 8px; height: 18px; background: var(--border); border-radius: 2px;"></div>
+            <div style="width: 8px; height: 26px; background: var(--border); border-radius: 2px;"></div>
+          </div>
+          <div id="tierLabel" style="font-size: 9px; color: var(--text-40); font-family: 'SF Mono', monospace; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">UNKNOWN</div>
+        </div>
       </div>
 
       <div id="gapCard" class="gap-statement" style="background: rgba(232, 181, 23, 0.1); border: 1px solid rgba(232, 181, 23, 0.3); padding: 20px; border-radius: var(--radius); margin-bottom: 24px;">
@@ -201,7 +255,61 @@
     </div>
   </div>
 
+  <!-- Personal Lead Detail View -->
+  <div id="personalLeadDetailView" class="leads-section" style="display:none; padding:20px; flex-direction:column; height:100%; overflow-y:auto;">
+    <button id="backFromPersonalDetailBtn" class="outline-btn" style="width:max-content; margin-bottom:20px;">← Back</button>
+
+    <div class="lead-info-card" style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-bottom:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div style="flex:1;">
+          <h2 id="pdCompany" style="font-size:24px; margin-bottom:8px;">Company Name</h2>
+          <div style="color:var(--text-70); font-size:14px; margin-bottom:12px;">
+            <span id="pdContactName">Contact Name</span> &bull; <span id="pdContactEmail">email</span>
+          </div>
+          <div style="margin-bottom:16px;">
+            <div class="section-label" style="margin-bottom:5px;">RELATIONSHIP</div>
+            <div id="pdRelationship" style="font-size:13px; color:var(--text-70); line-height:1.5;">-</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div id="pdWebsiteLink" style="display:flex; align-items:center; gap:6px; cursor:pointer; border-bottom:1px solid rgba(255,94,0,0.2); padding-bottom:2px; width:max-content; transition:all 0.2s;">
+              <span id="pdWebsiteText" style="font-size:13px; color:var(--accent); font-weight:600;">-</span>
+              <svg style="width:14px;height:14px; color:var(--accent); stroke-width:3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+            </div>
+            <button id="pdScrapeBtn" class="outline-btn" style="font-size:10px; padding:3px 10px; border-color:rgba(255,255,255,0.1); color:var(--text-70); display:none;">Scrape Website</button>
+            <button id="pdEditBtn" class="outline-btn" style="font-size:11px; padding:6px 16px; border-color:rgba(255,255,255,0.1); color:var(--text-70);">EDIT LEAD</button>
+          </div>
+        </div>
+        <div id="pdStatusBadge" class="status-draft" style="padding:6px 12px; border:1px solid var(--border); border-radius:12px; font-size:13px; display:flex; align-items:center; flex-shrink:0;">
+          <span class="status-dot"></span><span id="pdStatusText">Draft</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="pdWebsiteContextSection" style="display:none; margin-bottom:24px;">
+      <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px;">
+        <div class="section-label" style="margin-bottom:12px;">WEBSITE CONTEXT</div>
+        <div id="pdWebsiteContext" style="font-size:12px; color:var(--text-70); line-height:1.6; white-space:pre-wrap; max-height:200px; overflow-y:auto;"></div>
+      </div>
+    </div>
+
+    <!-- Dynamic email composers — rendered by JS -->
+    <div id="pdEmailsContainer"></div>
+
+    <div style="margin-bottom:24px;">
+      <button id="pdAddEmailBtn" class="outline-btn" style="font-size:11px; padding:8px 18px; border-style:dashed; color:var(--text-40); border-color:rgba(255,255,255,0.12);">+ Add another email</button>
+    </div>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; padding-bottom:20px;">
+      <button id="pdMarkSentBtn" class="outline-btn" style="font-size:11px; padding:8px 18px;">Mark as Sent</button>
+      <button id="pdMarkRepliedBtn" class="outline-btn" style="font-size:11px; padding:8px 18px;">Mark as Replied</button>
+      <button id="pdMarkNoResponseBtn" class="outline-btn" style="font-size:11px; padding:8px 18px;">Mark as No Response</button>
+      <div style="flex:1;"></div>
+      <button id="pdDeleteBtn" class="outline-btn" style="font-size:11px; padding:8px 18px; border-color:rgba(239,68,68,0.3); color:#EF4444;">Delete</button>
+    </div>
+  </div>
+
 </main>
+</div> <!-- /appBody -->
 
 <!-- Settings Modal -->
 <div id="settingsModal" class="modal">
@@ -361,6 +469,88 @@
         <input type="text" id="editCountry" class="full-input" placeholder="UK, Australia, UAE...">
       </div>
       <button id="saveEditBtn" class="primary-btn" style="width: 100%; justify-content: center; height: 36px; font-size: 12px; margin-top: 8px;">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Personal Lead Modal -->
+<div id="addPersonalLeadModal" class="modal">
+  <div class="modal-content" style="max-width:460px; padding:0;">
+    <div style="padding:24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+      <h2 style="font-size:14px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); margin:0;">New Personal Lead</h2>
+      <div id="closeAddPersonalLeadModalBtn" style="font-size:20px; color:var(--text-40); cursor:pointer; padding:4px; line-height:1;">&times;</div>
+    </div>
+    <div style="padding:24px; display:flex; flex-direction:column; gap:14px;">
+      <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">COMPANY NAME *</label>
+        <input type="text" id="plCompany" class="full-input" placeholder="e.g. HK Vitals">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">CONTACT NAME *</label>
+          <input type="text" id="plContactName" class="full-input" placeholder="Full name">
+        </div>
+        <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">CONTACT EMAIL *</label>
+          <input type="text" id="plContactEmail" class="full-input" placeholder="email@company.com">
+        </div>
+      </div>
+      <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">WEBSITE (Optional)</label>
+        <input type="text" id="plWebsite" class="full-input" placeholder="https://...">
+      </div>
+      <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">RELATIONSHIP CONTEXT *</label>
+        <textarea id="plRelationship" rows="3" class="full-input" placeholder='e.g. "Worked on HK Vitals brand identity as design lead in 2021"' style="resize:vertical;"></textarea>
+      </div>
+      <button id="savePersonalLeadBtn" class="primary-btn" style="width:100%; justify-content:center; height:36px; font-size:12px; margin-top:4px;">Add Lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Personal Lead Modal -->
+<div id="editPersonalLeadModal" class="modal">
+  <div class="modal-content" style="max-width:460px; padding:0;">
+    <div style="padding:24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+      <h2 style="font-size:14px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); margin:0;">Edit Lead</h2>
+      <div id="closeEditPersonalLeadModalBtn" style="font-size:20px; color:var(--text-40); cursor:pointer; padding:4px; line-height:1;">&times;</div>
+    </div>
+    <div style="padding:24px; display:flex; flex-direction:column; gap:14px;">
+      <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">COMPANY NAME</label>
+        <input type="text" id="plEditCompany" class="full-input">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">CONTACT NAME</label>
+          <input type="text" id="plEditContactName" class="full-input">
+        </div>
+        <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">CONTACT EMAIL</label>
+          <input type="text" id="plEditContactEmail" class="full-input">
+        </div>
+      </div>
+      <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">WEBSITE</label>
+        <input type="text" id="plEditWebsite" class="full-input">
+      </div>
+      <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">RELATIONSHIP CONTEXT</label>
+        <textarea id="plEditRelationship" rows="3" class="full-input" style="resize:vertical;"></textarea>
+      </div>
+      <button id="saveEditPersonalLeadBtn" class="primary-btn" style="width:100%; justify-content:center; height:36px; font-size:12px; margin-top:4px;">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Personal Lead Modal -->
+<div id="deletePersonalModal" class="modal">
+  <div class="modal-content" style="max-width:320px; text-align:center; border:1px solid rgba(239,68,68,0.2);">
+    <h3 style="margin-top:0; color:#EF4444; font-size:16px; letter-spacing:1px;">DELETE LEAD</h3>
+    <p style="font-size:13px; color:var(--text-70); margin:16px 0; line-height:1.5;">Are you sure you want to delete this lead? This action cannot be undone.</p>
+    <div style="display:flex; gap:12px; justify-content:center; margin-top:24px;">
+      <button id="cancelDeletePersonalBtn" class="outline-btn" style="flex:1; padding:10px;">CANCEL</button>
+      <button id="confirmDeletePersonalBtn" class="outline-btn" style="flex:1; border-color:#EF4444; color:#EF4444; padding:10px;">DELETE</button>
     </div>
   </div>
 </div>
