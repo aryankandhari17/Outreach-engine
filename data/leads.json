@@ -245,15 +245,15 @@
       "siteType": "e-commerce / online retail",
       "evidence": {
         "working": [
-          "50+ brands clearly organized with dedicated collection pages for each (Birkenstock, Django & Juliette, Frankie4, Tony Bianco, Dr. Martens, Clarks, etc.)",
-          "Navigation splits cleanly by gender (Women's, Men's, Kids), style (Sneakers, Boots, Flats, Sandals), and fit type (Regular Fit, Narrow Fit, Soft Footbed)",
-          "Free shipping threshold clearly stated ($100+), plus buy now pay later options visible",
-          "Extended sizes category and comfort-focused brands show they've thought about different customer needs",
-          "Multiple sale categories and new arrivals sections make it easy to browse by shopping intent"
+          "50+ brands clearly organized with dedicated navigation sections for each major brand (Birkenstock, Django & Juliette, Frankie4, Tony Bianco, etc.)",
+          "Navigation splits cleanly by gender (Women's, Men's, Kids), style categories (Sneakers, Boots, Flats, Sandals), and fit types (Regular Fit, Narrow Fit, Soft Footbed)",
+          "Free shipping threshold clearly stated ($100+), buy now pay later available, multiple currency options",
+          "Extended sizes category and comfort-focused brands (Frankie4, Ziera, Archline) show they've thought about different customer needs",
+          "Sale section well-organized by season and gender, making it easy to browse discounted items"
         ],
         "confusing": []
       },
-      "visitorReaction": "This is a well-organized online footwear retailer. Within seconds I could browse by brand, style, or gender. The range is extensive — from premium European leathers to streetwear to kids' back-to-school shoes — and the navigation makes it easy to find what you're looking for.",
+      "visitorReaction": "This is a well-organized online footwear retailer. Within seconds I could browse by brand, style, or gender. The range is extensive — from premium European brands to comfort specialists to streetwear — and the navigation makes it easy to find what you're looking for.",
       "pillars": {
         "positioning": {
           "score": 4,
@@ -261,23 +261,24 @@
         },
         "trust": {
           "score": 4,
-          "reason": "Recognizable brand names (Birkenstock, Dr. Martens, Clarks, Converse, R.M.Williams), free shipping over $100, and extended size options build confidence"
+          "reason": "Recognizable brand names (Birkenstock, Dr. Martens, Clarks, Converse), free shipping over $100, buy now pay later, and testimonials build confidence"
         },
         "conversion": {
           "score": 4,
-          "reason": "Clear navigation paths, visible sale sections, buy now pay later options, and straightforward product browsing make the path to purchase obvious"
+          "reason": "Clear navigation paths, prominent new arrivals and best sellers sections, sale categories, and straightforward shopping experience"
         }
       },
       "mostImpressive": "positioning",
       "industry": "online footwear retail",
       "opening_line": "I came across Evans Shoes while looking at Australian footwear retailers — the range is impressive, with 50+ brands from Birkenstock to Django & Juliette to Tony Bianco, and the category navigation makes it easy to find what you're after.",
-      "design_compliment": "the way the navigation breaks down by brand, style, and fit type (regular, narrow, soft footbed) shows real thought about how different customers actually shop for shoes — most multi-brand retailers just dump everything into one grid, but this lets someone who knows they need a narrow fit or soft footbed find what works for them immediately"
+      "design_compliment": "the way the navigation breaks down by brand, style, fit type (regular, narrow, soft footbed), and customer need (extended sizes, comfort, wedding) shows real thought about how different customers actually shop for shoes — most multi-brand retailers just dump everything into one grid"
     },
     "sequence": {
       "e1s": "Nicely done, evanshoes",
-      "e1b": "Hi Evan,\n\nI came across Evans Shoes while looking at Australian footwear retailers — the range is impressive, with 50+ brands from Birkenstock to Django & Juliette to Tony Bianco, and the category navigation makes it easy to find what you're after.\n\nHere's what stood out: the way the navigation breaks down by brand, style, and fit type (regular, narrow, soft footbed) shows real thought about how different customers actually shop for shoes — most multi-brand retailers just dump everything into one grid, but this lets someone who knows they need a narrow fit or soft footbed find what works for them immediately.\n\nWe're a design consultancy that takes the same science-first approach to UX — decisions backed by how people actually behave, not just what looks good. So when we see it done well, we notice.\n\nIf you ever need an extra pair of hands on a project, we'd enjoy working with a team that thinks this way.\n\n— Aryan\nPartner, Labs22\nlabs22.com"
+      "e1b": "Hi Evan,\n\nI came across Evans Shoes while looking at Australian footwear retailers — the range is impressive, with 50+ brands from Birkenstock to Django & Juliette to Tony Bianco, and the category navigation makes it easy to find what you're after.\n\nHere's what stood out: the way the navigation breaks down by brand, style, fit type (regular, narrow, soft footbed), and customer need (extended sizes, comfort, wedding) shows real thought about how different customers actually shop for shoes — most multi-brand retailers just dump everything into one grid.\n\nWe're a design consultancy that takes the same science-first approach to UX — decisions backed by how people actually behave, not just what looks good. So when we see it done well, we notice.\n\nIf you ever need an extra pair of hands on a project, we'd enjoy working with a team that thinks this way.\n\n— Aryan\nPartner, Labs22\nlabs22.com"
     },
-    "campaign": "Manual"
+    "campaign": "Manual",
+    "industry": "online footwear retail"
   },
   {
     "firstName": "kafsjfd",
@@ -564,39 +565,56 @@
     "dateAdded": "2026-04-01T12:00:52.478Z",
     "analysis": {
       "siteLoaded": true,
-      "emailTier": "soft",
-      "visitorReaction": "I can tell this is a case management platform for HR, compliance, and integrity teams — that part lands reasonably well. The site covers a lot of ground across roles and sectors, but I had to do some reading to piece together what makes Rely different from other compliance or HR software. It feels like a solid product with a lot of features, but the homepage leans heavily on feature lists rather than showing me what actually changes for the organisations using it.",
+      "emailTier": "strong",
+      "siteType": "SaaS / software",
+      "evidence": {
+        "working": [
+          "Clear that they provide case management software for HR, compliance, and employee relations",
+          "Positioning around 'integrity & employee relations case management' gives a sense of the core offering",
+          "Client logos visible (Woolworths mentioned in structured data) suggest established credibility",
+          "Multiple intake points mentioned - forms, whistleblowing integration, anonymous reporting",
+          "Navigation splits by role (Executives, HR, Legal) and sector (Aged Care, Healthcare, Sport) showing they've thought about different audiences"
+        ],
+        "confusing": [
+          "After reading the homepage I still couldn't tell what specific outcomes companies typically achieve with Rely - faster case resolution? reduced compliance risk? better employee retention?",
+          "The hero text says 'enhance compliance, automate busywork, & make informed decisions' but these benefits could apply to dozens of HR tech platforms - not clear what makes Rely's approach different"
+        ]
+      },
+      "visitorReaction": "I can tell they provide case management software for HR and compliance teams to handle workplace issues, complaints, and whistleblowing. The positioning around 'integrity & employee relations' is clear. But as a first-time visitor it wasn't immediately obvious what specific outcomes companies achieve with Rely or what makes their approach different from other HR case management platforms.",
       "pillars": {
         "positioning": {
-          "score": 3,
-          "reason": "The tagline 'all-in-one integrity & employee relations case management platform' describes the product category but doesn't clearly distinguish Rely from competitors or show what outcomes customers actually get."
+          "score": 2,
+          "reason": "The category (case management for HR/compliance) is clear but the specific value proposition and differentiation are vague - 'enhance compliance, automate busywork' could describe many platforms"
         },
         "trust": {
           "score": 3,
-          "reason": "References to 'hundreds of organisations' and sector logos are present, but there are no named client stories, testimonials, or specific results that would make a buyer feel confident this has worked for organisations like theirs."
+          "reason": "Client logos present (Woolworths) and detailed feature descriptions build some credibility, but no specific case studies or outcome metrics visible on homepage"
         },
         "conversion": {
           "score": 4,
-          "reason": "Book demo and brochure download paths are visible and accessible without much friction."
+          "reason": "Multiple clear CTAs - 'See how it works', 'Book demo', 'Download Brochure' - easy to find next steps"
         }
       },
       "mostPainful": "positioning",
-      "industry": "HR compliance and workplace integrity case management software",
-      "opening_line": "I came across Rely while looking at HR compliance and workplace integrity platforms in Australia, and noticed the positioning around being an all-in-one case management system trusted by hundreds of organisations across sectors like aged care, finance, and sport.",
-      "specific_observation": "the site does a thorough job listing what Rely does — intake forms, workflows, whistleblowing integration, role-based permissions — but as a first-time visitor it's still hard to understand what specifically makes Rely the right choice over other case management tools, or what a typical organisation actually experiences after switching to it",
+      "industry": "HR compliance and case management software",
+      "opening_line": "I came across Rely while looking at case management platforms for HR and compliance teams, and noticed the positioning around integrity, employee relations, and whistleblowing management.",
+      "specific_observation": "as a first-time visitor it's still not immediately clear what specific outcomes companies typically achieve with Rely (faster resolution times? reduced legal risk? better reporting?) or what makes your approach different from other HR case management platforms beyond the feature list",
       "pointers": [
-        "The hero section describes the product category well, but adding a single concrete outcome — like reduced time to resolve cases or improved reporting rates — would give buyers a clearer sense of what they're actually buying.",
-        "The 'hundreds of organisations' line builds some credibility, but a named customer quote or a brief case study from a recognisable sector like healthcare or ASX companies would make that claim feel real rather than generic.",
-        "The site targets a wide range of roles — Executives, HR, Legal, Health & Safety — but the homepage messaging tries to speak to all of them at once, which can make it harder for any one visitor to feel like Rely was built specifically for their situation."
+        "Adding a short outcome-focused statement under the hero text - something like 'Companies using Rely resolve workplace issues 40% faster while maintaining full audit trails' - would immediately communicate the tangible value beyond just listing features like compliance and automation",
+        "The 'See what's really going on' section does a good job explaining the problem of scattered records and invisible conduct issues - backing this up with one specific example of how a client used Rely's data insights to prevent a larger issue would make the benefit feel more concrete and credible",
+        "The navigation by role and sector shows you understand different audiences, but the homepage messaging stays quite general - adding a rotating hero section or testimonial that speaks to one specific audience at a time (e.g. 'How aged care providers use Rely to manage safeguarding incidents') would help visitors immediately see themselves in your solution"
       ]
     },
     "sequence": {
-      "e1s": "Quick note on dsklgj's site",
-      "e1b": "Hi kafsjfd,\n\nI came across Rely while looking at HR compliance and workplace integrity platforms in Australia, and noticed the positioning around being an all-in-one case management system trusted by hundreds of organisations across sectors like aged care, finance, and sport.\n\nYour site is cleaner than most in your space, which is rare. But even well-built sites usually have 2-3 refinements that shift them from \"good\" to \"the one visitors remember.\"\n\nIf that's ever useful to explore, happy to share what we'd look at. No obligation.\n\n— Aryan\nPartner, Labs22\nlabs22.com",
-      "e2s": "Re: dsklgj's site",
-      "e2b": "Hi kafsjfd,\n\nFollowing up on my note.\n\nWe focus on UX and digital experience design — making sure the website works as hard as the business behind it.\n\nFor companies with a solid foundation like yours, small refinements tend to have an outsized impact on how visitors engage and convert.\n\nIf this is ever relevant, happy to chat. If not, no worries at all.\n\n— Aryan\nPartner, Labs22\nlabs22.com"
+      "e1s": "Quick thought on dsklgj's website",
+      "e1b": "Hi kafsjfd,\n\nI came across Rely while looking at case management platforms for HR and compliance teams, and noticed the positioning around integrity, employee relations, and whistleblowing management.\n\nI might be wrong, but as a first-time visitor it's still not immediately clear what specific outcomes companies typically achieve with Rely (faster resolution times? reduced legal risk? better reporting?) or what makes your approach different from other HR case management platforms beyond the feature list.\n\n— Aryan\nPartner, Labs22\nlabs22.com",
+      "e2s": "Re: dsklgj's website",
+      "e2b": "Hi kafsjfd,\n\nFollowing up on my note — here are a few things I noticed:\n\n• Adding a short outcome-focused statement under the hero text - something like 'Companies using Rely resolve workplace issues 40% faster while maintaining full audit trails' - would immediately communicate the tangible value beyond just listing features like compliance and automation\n• The 'See what's really going on' section does a good job explaining the problem of scattered records and invisible conduct issues - backing this up with one specific example of how a client used Rely's data insights to prevent a larger issue would make the benefit feel more concrete and credible\n• The navigation by role and sector shows you understand different audiences, but the homepage messaging stays quite general - adding a rotating hero section or testimonial that speaks to one specific audience at a time (e.g. 'How aged care providers use Rely to manage safeguarding incidents') would help visitors immediately see themselves in your solution\n\nThese are the kinds of small changes that tend to shift how visitors perceive a business — not a redesign, but targeted refinements that make the difference between someone browsing and someone reaching out.\n\n— Aryan\nPartner, Labs22\nlabs22.com",
+      "e3s": "Re: quick thoughts",
+      "e3b": "Hi kafsjfd,\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — making sure websites convert visitors into customers as effectively as the business deserves.\n\nIf this is ever relevant, happy to exchange notes.\n\n— Aryan"
     },
-    "campaign": "Manual"
+    "campaign": "Manual",
+    "industry": "HR compliance and case management software"
   },
   {
     "firstName": "kafsjfd",
