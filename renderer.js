@@ -1045,12 +1045,21 @@ async function processLead(lead) {
         }
       } catch(e) { /* /about doesn't exist or timed out — continue with what we have */ }
 
-      // Prepend a note so the AI knows this is a JS-rendered site and doesn't fire siteLoaded: false
-      // based purely on sparse body text
-      contentForAI = `[SCRAPER NOTE: This site uses client-side JavaScript rendering (React / Next.js / Vue / etc.). ` +
-        `The content below comes from static HTML only — the full page requires JavaScript to load. ` +
-        `This is NOT an empty or broken site. Analyse based on available title, description, and any page text. ` +
-        `Only return siteLoaded: false if the content explicitly indicates a domain error, 404, or "coming soon" page.]\n\n` +
+      // Prepend a hard override note + known lead fields so the AI has enough to work with
+      const leadContext = [
+        lead.company   && `Company name: ${lead.company}`,
+        lead.industry  && `Industry: ${lead.industry}`,
+        lead.websiteURL && `Domain: ${lead.websiteURL}`
+      ].filter(Boolean).join('\n');
+
+      contentForAI = `[SCRAPER NOTE — MANDATORY OVERRIDE: This site uses client-side JavaScript rendering. ` +
+        `The text below is sparse because the scraper can only read static HTML — the actual site content loads via JavaScript. ` +
+        `This is a technical scraper limitation, NOT evidence of a thin or empty site. ` +
+        `RULE: You are FORBIDDEN from returning emailTier "skip" for this lead. ` +
+        `RULE: You are FORBIDDEN from applying STEP 1.5 (thin site check). ` +
+        `RULE: If the scraped text is too sparse for full analysis, use the company name and domain below to form your best judgment and assign emailTier "3" (soft reach). ` +
+        `Only return siteLoaded: false if the content explicitly says "domain not found", "404", or "coming soon".]\n\n` +
+        (leadContext ? `[KNOWN LEAD DATA]\n${leadContext}\n\n` : '') +
         contentForAI;
     }
 

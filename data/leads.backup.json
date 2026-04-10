@@ -693,29 +693,28 @@
     "errorMsg": "Unexpected token 'I', \"I need to \"... is not valid JSON",
     "analysis": {
       "siteLoaded": true,
-      "emailTier": "strong",
-      "sector": "F&B / Cafe / Coffee Chain",
-      "brandStrength": 2,
-      "differentiator": "India-based coffee chain specializing in Arabica coffee with multiple locations and a focus on quality brewing",
-      "visitorReaction": "This is an established coffee chain operation in India with multiple locations and a clear focus on Arabica coffee. The scale and the specialty coffee positioning are solid foundations. There's room for the brand to own more of what makes this chain different from the dozens of other coffee shops competing for the same customer.",
-      "industry": "specialty coffee and cafe chain",
-      "opening_line": "I came across Tan Coffee while looking at specialty coffee chains in India — multiple locations, Arabica coffee focus, and clearly building something with franchise or expansion ambitions.",
-      "brand_observation": "the Arabica focus and the multi-location presence is exactly the kind of credibility signal that could differentiate you in a crowded market — there's an opportunity for that specialty positioning to lead the entire brand experience, from the storefront design to the cup itself, rather than competing on convenience alone",
+      "emailTier": "soft",
+      "sector": "F&B / Cafe / Coffee",
+      "brandStrength": 3,
+      "differentiator": "Arabica-focused coffee chain with Indian roots, positioning around quality bean selection in a market often dominated by blends",
+      "visitorReaction": "I came across Tan Coffee while looking at specialty coffee chains in India. The Arabica focus is clear from the homepage, which is smart positioning in a market where many chains still lean heavily on blends. The brand hints at quality and specialty credentials, but there's room for the story to go deeper — where the beans come from, what makes the brewing approach different, or what the founder vision was that led to building an Arabica-first chain in India.",
+      "industry": "specialty coffee chain in India",
+      "opening_line": "I came across Tan Coffee while looking at specialty coffee chains in India — an Arabica-focused brand in a market where that's still a genuine differentiator.",
+      "brand_observation": "the Arabica positioning is clear and smart for the Indian market, but there's room for the brand to tell more of the sourcing story, the brewing philosophy, or the founder vision behind building a specialty chain — right now it hints at quality without fully owning what makes that quality different from other cafes saying similar things",
       "pointers": [
-        "A signature visual system for the Arabica messaging — where the bean origin, roast profile, and brewing method are communicated consistently across menu boards, cups, and in-store materials — would position Tan as the specialty choice rather than just another coffee option",
-        "Bringing the India story into the brand more deliberately — whether that's through local sourcing partnerships, regional coffee education, or celebrating Indian coffee culture — would give the chain a distinct identity that international brands can't replicate",
-        "A cohesive brand identity across all touchpoints — from the storefront signage to the packaging to the digital presence — would build the kind of visual consistency that makes customers choose you by instinct when they're deciding between three coffee shops on the same street"
+        "Bringing the sourcing story to the front — where the Arabica beans come from, whether it's single-origin or estate-specific, and what that means for the cup quality — would give customers a reason to choose Tan over generic 'Arabica coffee' claims that every chain now makes",
+        "Defining what 'specialty' means in your context — whether it's the roasting approach, the brewing methods, barista training, or a specific coffee philosophy — so the brand communicates expertise and intention, not just premium ingredients",
+        "Weaving the founder story or the 'why we started this' narrative into the brand experience, especially if there's a personal connection to coffee culture or a specific vision for what Indian specialty coffee should be — that kind of origin story makes a chain feel like a brand, not just a business"
       ]
     },
     "sequence": {
-      "e1s": "Quick thought on dsklgj's brand",
-      "e1b": "Hi kafsjfd,\n\nI came across Tan Coffee while looking at specialty coffee chains in India — multiple locations, Arabica coffee focus, and clearly building something with franchise or expansion ambitions.\n\nI might be wrong, but the Arabica focus and the multi-location presence is exactly the kind of credibility signal that could differentiate you in a crowded market — there's an opportunity for that specialty positioning to lead the entire brand experience, from the storefront design to the cup itself, rather than competing on convenience alone. In our experience, this is often the difference between a company that competes on price and one that commands premium positioning.\n\n— Nitya\nPartner, Labs22\nlabs22.com",
+      "e1s": "Quick note on dsklgj's brand",
+      "e1b": "Hi kafsjfd,\n\nI came across Tan Coffee while looking at specialty coffee chains in India — an Arabica-focused brand in a market where that's still a genuine differentiator.\n\nYour brand is stronger than most in your space, which is rare. I noticed a couple of areas where small refinements could take it from strong to standout.\n\nIf that's ever useful to explore, happy to share what we'd look at. No obligation.\n\n— Nitya\nPartner, Labs22\nlabs22.com",
       "e2s": "Re: dsklgj's brand",
-      "e2b": "Hi kafsjfd,\n\nFollowing up on my note — here are a few things I noticed:\n\n• A signature visual system for the Arabica messaging — where the bean origin, roast profile, and brewing method are communicated consistently across menu boards, cups, and in-store materials — would position Tan as the specialty choice rather than just another coffee option\n• Bringing the India story into the brand more deliberately — whether that's through local sourcing partnerships, regional coffee education, or celebrating Indian coffee culture — would give the chain a distinct identity that international brands can't replicate\n• A cohesive brand identity across all touchpoints — from the storefront signage to the packaging to the digital presence — would build the kind of visual consistency that makes customers choose you by instinct when they're deciding between three coffee shops on the same street\n\nThese are the kinds of refinements that shift how customers perceive a brand — not a full redesign, but targeted changes that make the difference between being considered and being chosen.\n\n— Nitya\nPartner, Labs22\nlabs22.com",
-      "e3s": "Re: quick thoughts",
-      "e3b": "Hi kafsjfd,\n\nJust nudging this in case it got buried.\n\nWe specialise in brand identity and packaging design — making sure companies look as good as the product or service they actually deliver.\n\nIf this is ever relevant, happy to exchange notes.\n\n— Nitya"
+      "e2b": "Hi kafsjfd,\n\nFollowing up on my note.\n\nWe focus on brand identity, packaging, and visual systems — making sure the brand works as hard as the product.\n\nFor companies with a solid foundation like yours, small refinements tend to have an outsized impact on how customers perceive and choose you.\n\nIf this is ever relevant, happy to chat. If not, no worries at all.\n\n— Nitya\nPartner, Labs22\nlabs22.com"
     },
-    "campaign": "Manual"
+    "campaign": "Manual",
+    "industry": "specialty coffee chain in India"
   },
   {
     "firstName": "Reyansh Martin",
