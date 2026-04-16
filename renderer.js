@@ -66,6 +66,12 @@ let currentMode = localStorage.getItem('currentMode') || 'uiux';
 let activeCampaign = localStorage.getItem('activeCampaign') || 'Manual';
 let sidebarOpen = localStorage.getItem('sidebarOpen') !== 'false';
 
+// Tier grouping state — persists collapse state across re-renders
+const tierCollapseState = {};
+const TIER_ORDER = ['strong', 'soft', 'compliment'];
+const TIER_LABELS = { strong: 'Strong Critique', soft: 'Soft Observation', compliment: 'Compliment' };
+const TIER_COLORS = { strong: '#EF4444', soft: '#F59E0B', compliment: '#10B981' };
+
 // Personal tab state — isolated from all other lead data
 let personalLeads = [];
 let currentPersonalLead = null;
@@ -710,16 +716,25 @@ function renderTable() {
   
   Object.keys(batches).sort((a,b)=>parseInt(a.replace('Batch ',''))-parseInt(b.replace('Batch ',''))).forEach(batchKey => {
     const list = batches[batchKey];
-    
+
     let bDateObj = new Date();
     if (list.length > 0 && list[0].dateAdded) { bDateObj = new Date(list[0].dateAdded); }
     const batchDateStr = `${String(bDateObj.getDate()).padStart(2,'0')}-${String(bDateObj.getMonth()+1).padStart(2,'0')}-${bDateObj.getFullYear()}`;
-    
+
     const isFullyExported = list.length > 0 && list.every(l => l.status === 'Exported');
     const hasQueued    = list.some(l => l.status === 'Queued');
     const hasReady     = list.some(l => l.status === 'Ready');
     const isThisProcessing = isProcessing && currentProcessingBatch === batchKey;
     const isBatchComplete  = !hasQueued && !isThisProcessing && list.every(l => l.status !== 'Processing');
+
+    // Compute tier groups for uiux mode (needed before building CTA)
+    const grouped = currentMode === 'uiux' ? {
+      strong:     list.filter(l => l.analysis?.emailTier === 'strong'),
+      soft:       list.filter(l => l.analysis && l.analysis.emailTier !== 'strong' && l.analysis.emailTier !== 'compliment'),
+      compliment: list.filter(l => l.analysis?.emailTier === 'compliment'),
+    } : null;
+    const ungroupedLeads = currentMode === 'uiux' ? list.filter(l => !l.analysis) : [];
+    const activeTiers = grouped ? TIER_ORDER.filter(t => grouped[t].length > 0) : [];
 
     let badgeHtml = '';
     if (isFullyExported) {
@@ -734,7 +749,12 @@ function renderTable() {
     } else if (hasQueued) {
       ctaHtml = `<button class="process-batch-inline-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; font-family:'SF Mono',monospace; opacity:${isProcessing?'0.5':'1'}; pointer-events:${isProcessing?'none':'auto'};">PROCESS BATCH</button>`;
     } else if (hasReady || isFullyExported) {
-      ctaHtml = `<button class="export-batch-inline-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT BATCH</button>`;
+      if (currentMode === 'uiux' && activeTiers.length > 0) {
+        const n = activeTiers.length;
+        ctaHtml = `<button class="export-all-groups-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT ALL ${n} GROUP${n === 1 ? '' : 'S'}</button>`;
+      } else {
+        ctaHtml = `<button class="export-batch-inline-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT BATCH</button>`;
+      }
     }
 
     const header = document.createElement('tr');
@@ -753,9 +773,15 @@ function renderTable() {
     const exportBatchBtn = header.querySelector('.export-batch-inline-btn');
     if (exportBatchBtn) exportBatchBtn.onclick = (e) => { e.stopPropagation(); exportSpecificLeads(list); };
 
+    const exportAllGroupsBtn = header.querySelector('.export-all-groups-btn');
+    if (exportAllGroupsBtn) exportAllGroupsBtn.onclick = async (e) => {
+      e.stopPropagation();
+      exportAllTierGroups(grouped, activeTiers);
+    };
+
     const processBatchBtn = header.querySelector('.process-batch-inline-btn');
     if (processBatchBtn) processBatchBtn.onclick = async (e) => {
-      e.stopPropagation(); 
+      e.stopPropagation();
       if (isProcessing && currentProcessingBatch === batchKey) {
         cancelProcessing = true;
         isProcessing = false;
@@ -781,9 +807,69 @@ function renderTable() {
       }
     };
 
-    list.forEach(l => {
-      tbody.appendChild(createLeadRow(l));
-    });
+    // Render leads — grouped by tier for uiux, flat for branding
+    // Safety: any error in tier grouping falls back to flat render so data never disappears
+    let tierRenderSucceeded = false;
+    if (currentMode === 'uiux' && grouped) {
+      try {
+        // Unprocessed leads (no analysis yet) render first, ungrouped
+        ungroupedLeads.forEach(l => tbody.appendChild(createLeadRow(l)));
+
+        // Tier group sections
+        TIER_ORDER.forEach(tier => {
+          const tierLeads = grouped[tier];
+          if (!tierLeads || tierLeads.length === 0) return;
+
+          const stateKey = `${batchKey}-${tier}`;
+          const isExpanded = tierCollapseState[stateKey] !== false;
+          const color = TIER_COLORS[tier];
+
+          const tierHeader = document.createElement('tr');
+          tierHeader.style.cursor = 'pointer';
+          tierHeader.innerHTML = `
+            <td colspan="9" style="padding:9px 20px 9px 32px; font-family:'SF Mono',monospace; font-size:10px; color:rgba(255,255,255,0.55); letter-spacing:1.2px; text-transform:uppercase; background:rgba(255,255,255,0.025); border-bottom:1px solid rgba(255,255,255,0.06);">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="color:${color}; font-size:7px; line-height:1;">&#9679;</span>
+                  <span style="color:rgba(255,255,255,0.3); font-size:9px;">${isExpanded ? '&#9662;' : '&#9656;'}</span>
+                  ${TIER_LABELS[tier]}
+                  <span style="color:rgba(255,255,255,0.28); font-weight:400; margin-left:4px;">&middot; ${tierLeads.length}</span>
+                </div>
+                <button class="tier-export-btn outline-btn" style="padding:3px 10px; font-size:9px; height:22px; border-color:${color}; color:${color}; font-family:'SF Mono',monospace; letter-spacing:0.5px; opacity:0.7;">Export</button>
+              </div>
+            </td>`;
+
+          tierHeader.onclick = (e) => {
+            if (e.target.closest('.tier-export-btn')) return;
+            tierCollapseState[stateKey] = !isExpanded;
+            renderTable();
+          };
+
+          const exportBtn = tierHeader.querySelector('.tier-export-btn');
+          if (exportBtn) {
+            exportBtn.onclick = (e) => {
+              e.stopPropagation();
+              exportTierCSV(tier, tierLeads);
+            };
+          }
+
+          tbody.appendChild(tierHeader);
+
+          if (isExpanded) {
+            tierLeads.forEach(l => tbody.appendChild(createLeadRow(l)));
+          }
+        });
+
+        tierRenderSucceeded = true;
+      } catch (err) {
+        console.error('[OutreachEngine] Tier grouping render failed, falling back to flat render:', err);
+      }
+    }
+
+    // Flat fallback: always runs if tier grouping didn't succeed
+    if (!tierRenderSucceeded) {
+      list.forEach(l => tbody.appendChild(createLeadRow(l)));
+    }
   });
   document.getElementById('importedCount').innerText = `${leads.filter(l=>l.mode===currentMode && l.campaign===activeCampaign).length} LEADS`;
 }
@@ -1497,6 +1583,62 @@ document.getElementById('exportReadyBtn').onclick = async () => {
   if (readyLeads.length === 0) { alert("No ready leads match the current filters."); return; }
   exportSpecificLeads(readyLeads);
 };
+
+// Builds CSV string for a tier — shared by single-tier and group export
+function buildTierCSVData(tierLeads) {
+  const esc = str => !str ? '""' : `"${str.replace(/"/g, '""')}"`;
+  let csv = 'First Name,Company,Website,Email,Country,Industry,E1 Subject,E1 Body,E2 Subject,E2 Body,E3 Subject,E3 Body\n';
+  tierLeads.forEach(l => {
+    const seq = l.sequence || {};
+    csv += `${esc(l.firstName)},${esc(l.company)},${esc(l.websiteURL)},${esc(l.email)},${esc(l.country)},${esc(l.analysis?.industry)},${esc(seq.e1s)},${esc(seq.e1b)},${esc(seq.e2s)},${esc(seq.e2b)},${esc(seq.e3s)},${esc(seq.e3b)}\n`;
+  });
+  return csv;
+}
+
+// Single-tier export — shows a save dialog and exports one CSV directly
+async function exportTierCSV(tierName, tierLeads) {
+  if (!tierLeads || tierLeads.length === 0) return;
+  const exportable = tierLeads.filter(l => l.status === 'Ready' || l.status === 'Exported');
+  if (exportable.length === 0) { alert(`No ready leads in the ${TIER_LABELS[tierName] || tierName} group.`); return; }
+
+  const date = new Date().toISOString().split('T')[0];
+  const filename = `labs22-outreach-${date}-${tierName}.csv`;
+  const saved = await window.electronAPI.saveCSV({ csvData: buildTierCSVData(exportable), suggestedName: filename });
+  if (saved) {
+    exportable.forEach(l => l.status = 'Exported');
+    saveAllState();
+    renderTable();
+    alert(`Exported ${exportable.length} ${TIER_LABELS[tierName] || tierName} leads.`);
+  }
+}
+
+// All-groups export — creates Labs22OutreachEngine-YYYY-MM-DD/ folder with a subfolder per tier
+async function exportAllTierGroups(grouped, activeTiers) {
+  const date = new Date().toISOString().split('T')[0];
+
+  const tiers = activeTiers
+    .map(tier => {
+      const exportable = (grouped[tier] || []).filter(l => l.status === 'Ready' || l.status === 'Exported');
+      if (exportable.length === 0) return null;
+      return {
+        name: tier,
+        filename: `labs22-outreach-${date}-${tier}.csv`,
+        csvData: buildTierCSVData(exportable),
+        leads: exportable
+      };
+    })
+    .filter(Boolean);
+
+  if (tiers.length === 0) { alert('No ready leads to export.'); return; }
+
+  const result = await window.electronAPI.saveExportGroup({ date, tiers });
+  if (result && result.success) {
+    tiers.forEach(t => t.leads.forEach(l => l.status = 'Exported'));
+    saveAllState();
+    renderTable();
+    alert(`Exported ${tiers.length} group${tiers.length !== 1 ? 's' : ''} to:\n${result.folderPath}`);
+  }
+}
 
 async function exportSpecificLeads(targetLeads) {
   if (!targetLeads || targetLeads.length === 0) return;

@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveState: (data) => ipcRenderer.invoke('state:save', data),
   loadState: () => ipcRenderer.invoke('state:load'),
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
-  aiCall: (params) => ipcRenderer.invoke('ai:call', params)
+  aiCall: (params) => ipcRenderer.invoke('ai:call', params),
+  saveExportGroup: (params) => ipcRenderer.invoke('dialog:saveExportGroup', params)
 });

@@ -61,6 +61,29 @@ ipcMain.handle('dialog:saveFile', async (event, { csvData, suggestedName }) => {
   return true;
 });
 
+// Export all tier groups as a named folder containing per-tier CSVs
+ipcMain.handle('dialog:saveExportGroup', async (event, { date, tiers }) => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    title: 'Choose where to save the export folder',
+    properties: ['openDirectory', 'createDirectory']
+  });
+  if (canceled || !filePaths || !filePaths[0]) return { success: false };
+
+  const parentDir = filePaths[0];
+  const folderName = `Labs22OutreachEngine-${date}`;
+  const exportDir = path.join(parentDir, folderName);
+
+  if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir, { recursive: true });
+
+  for (const tier of tiers) {
+    const tierDir = path.join(exportDir, tier.name);
+    if (!fs.existsSync(tierDir)) fs.mkdirSync(tierDir, { recursive: true });
+    fs.writeFileSync(path.join(tierDir, tier.filename), tier.csvData, 'utf-8');
+  }
+
+  return { success: true, folderPath: exportDir };
+});
+
 // Leads are saved to a visible /data folder inside the project directory.
 // A .backup.json is kept from the previous save so no data is ever silently lost.
 const DATA_DIR = path.join(__dirname, 'data');
