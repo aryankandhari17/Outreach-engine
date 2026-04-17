@@ -4,6 +4,30 @@ const fs = require('fs');
 const https = require('https');
 const http = require('http');
 const zlib = require('zlib');
+const { autoUpdater } = require('electron-updater');
+
+// Auto-updater configuration
+autoUpdater.autoDownload = true;       // Download silently in background
+autoUpdater.autoInstallOnAppQuit = true; // Install when the app is next quit
+
+function setupAutoUpdater() {
+  autoUpdater.checkForUpdatesAndNotify().catch(() => {
+    // Silently ignore — no internet, no GitHub token, dev environment, etc.
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Update Ready',
+      message: 'A new version of OutreachEngine has been downloaded.',
+      detail: 'The update will be installed when you quit the app, or you can restart now.',
+      buttons: ['Restart Now', 'Later'],
+      defaultId: 0
+    }).then(({ response }) => {
+      if (response === 0) autoUpdater.quitAndInstall();
+    });
+  });
+}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -23,6 +47,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+  setupAutoUpdater();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -91,6 +116,7 @@ const LEADS_FILE = path.join(DATA_DIR, 'leads.json');
 const LEADS_BACKUP = path.join(DATA_DIR, 'leads.backup.json');
 
 ipcMain.handle('state:save', async (event, data) => {
+  if (!Array.isArray(data)) { console.error('[OutreachEngine] state:save blocked — data is not an array'); return; }
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   // Rotate current save to backup before overwriting
   if (fs.existsSync(LEADS_FILE)) fs.copyFileSync(LEADS_FILE, LEADS_BACKUP);
@@ -106,16 +132,24 @@ ipcMain.handle('state:load', async () => {
       try {
         const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
         if (Array.isArray(parsed)) {
+          if (parsed.length === 0) {
+            console.warn(`[OutreachEngine] state:load — ${path.basename(filePath)} is an empty array, trying next source...`);
+            continue;  // Skip empty arrays, try backup/legacy
+          }
           // If loaded from backup or legacy, migrate to primary location
           if (filePath !== LEADS_FILE) {
+            console.log(`[OutreachEngine] state:load — recovered ${parsed.length} leads from ${path.basename(filePath)}`);
             if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
             fs.writeFileSync(LEADS_FILE, JSON.stringify(parsed, null, 2), 'utf-8');
           }
           return parsed;
         }
-      } catch (e) { /* file corrupted, try next */ }
+      } catch (e) {
+        console.error(`[OutreachEngine] state:load — ${path.basename(filePath)} corrupted:`, e.message);
+      }
     }
   }
+  console.warn('[OutreachEngine] state:load — no valid leads file found');
   return null;
 });
 

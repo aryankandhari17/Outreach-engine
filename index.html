@@ -27,7 +27,7 @@
   </div>
   
   <div class="header-right no-drag" style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
-    <div class="ai-badge">GEMINI</div>
+    <div class="ai-badge">CLAUDE</div>
     <div id="settingsBtn" class="settings-icon">⚙</div>
   </div>
 </header>
@@ -327,12 +327,7 @@
     <div id="settingsGeneral" class="settings-pane">
       <div class="settings-group">
         <label>API KEYS</label>
-        <div class="input-row"><span>Gemini</span><input type="text" id="geminiKey" class="minimal-input"></div>
-        <div class="input-row"><span>Claude</span><input type="text" id="claudeKey" class="minimal-input"></div>
-        <div class="input-row"><span>OpenAI</span><input type="text" id="openaiKey" class="minimal-input"></div>
-        <div class="input-row"><span>Active AI</span>
-          <select id="activeAi" class="minimal-select"><option value="Gemini">Gemini</option><option value="Claude">Claude</option><option value="OpenAI">OpenAI</option></select>
-        </div>
+        <div class="input-row"><span>Claude API Key</span><input type="text" id="claudeKey" class="minimal-input" placeholder="sk-ant-..."></div>
         <div class="input-row"><span>Model</span><select id="activeModel" class="minimal-select"></select></div>
       </div>
     </div>

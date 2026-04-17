@@ -68,6 +68,10 @@ let sidebarOpen = localStorage.getItem('sidebarOpen') !== 'false';
 
 // Tier grouping state — persists collapse state across re-renders
 const tierCollapseState = {};
+
+// Batch-level ENOC overrides — loaded from localStorage
+let batchEnocSettings = {};
+try { const s = localStorage.getItem('batchEnocSettings'); if (s) batchEnocSettings = JSON.parse(s); } catch(e) { batchEnocSettings = {}; }
 const TIER_ORDER = ['strong', 'soft', 'compliment'];
 const TIER_LABELS = { strong: 'Strong Critique', soft: 'Soft Observation', compliment: 'Compliment' };
 const TIER_COLORS = { strong: '#EF4444', soft: '#F59E0B', compliment: '#10B981' };
@@ -157,7 +161,7 @@ function campaignProgressRing(pct, isComplete, count) {
   const ringColor = isComplete ? '#10B981' : 'var(--accent)';
   const label = isComplete
     ? `<text x="15" y="19" text-anchor="middle" font-size="10" fill="#10B981" font-weight="600">✓</text>`
-    : `<text x="15" y="18.5" text-anchor="middle" font-size="${pct === 100 ? '6.5' : '7'}" font-family="SF Mono,monospace" fill="rgba(255,255,255,0.65)" font-weight="600">${pct}%</text>`;
+    : `<text x="15" y="19" text-anchor="middle" font-size="${pct === 100 ? '7' : pct >= 10 ? '8' : '9'}" font-family="SF Mono,monospace" fill="rgba(255,255,255,0.8)" font-weight="700">${pct}%</text>`;
 
   return `<svg width="30" height="30" viewBox="0 0 30 30" style="flex-shrink:0;">
     <circle cx="15" cy="15" r="${r}" fill="none" stroke="${trackColor}" stroke-width="2"/>
@@ -331,52 +335,46 @@ function renderSidebar() {
 let activeTab = localStorage.getItem('activeTab') || 'tabLeads';
 let currentLeadInDetail = null;
 
+let _saveTimer = null;
 const saveAllState = () => {
-  if (window.electronAPI && window.electronAPI.saveState) {
-    window.electronAPI.saveState(leads);
-  }
+  if (!window.electronAPI || !window.electronAPI.saveState) return;
+  if (!Array.isArray(leads)) { console.error('[OutreachEngine] saveAllState blocked: leads is not an array'); return; }
+  // Debounce: coalesce rapid-fire saves into one write (500ms)
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    _saveTimer = null;
+    window.electronAPI.saveState(leads).catch(err => console.error('[OutreachEngine] saveState failed:', err));
+  }, 500);
 };
 
 const MODELS_MAP = {
-  Gemini: [
-    { id: 'gemini-2.5-pro-preview-03-25', label: 'Gemini 2.5 Pro' },
-    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-    { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }
-  ],
   Claude: [
     { id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5 / 4.6 (Latest)' },
     { id: 'claude-3-7-sonnet-20250219', label: 'Claude Sonnet 3.7' },
     { id: 'claude-3-5-sonnet-20241022', label: 'Claude Sonnet 3.5' },
     { id: 'claude-3-5-haiku-20241022', label: 'Claude Haiku 3.5' },
     { id: 'claude-3-opus-20240229', label: 'Claude Opus 3' }
-  ],
-  OpenAI: [
-    { id: 'gpt-4o', label: 'GPT-4o' },
-    { id: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-    { id: 'o1-preview', label: 'o1 Preview' }
   ]
 };
 
 function updateModelDropdown() {
-  const provider = document.getElementById('activeAi').value;
   const modelSelect = document.getElementById('activeModel');
   const currentVal = localStorage.getItem('activeModel');
   modelSelect.innerHTML = '';
-  (MODELS_MAP[provider] || []).forEach(m => {
+  MODELS_MAP.Claude.forEach(m => {
     const opt = document.createElement('option');
     opt.value = m.id; opt.innerText = m.label;
     modelSelect.appendChild(opt);
   });
-  const ids = (MODELS_MAP[provider] || []).map(m => m.id);
+  const ids = MODELS_MAP.Claude.map(m => m.id);
   if (currentVal && ids.includes(currentVal)) {
     modelSelect.value = currentVal;
   }
 }
 
 function updateActiveAiBadge() {
-  const provider = localStorage.getItem('activeAi') || 'Gemini';
   const badge = document.querySelector('.ai-badge');
-  if (badge) badge.innerText = provider.toUpperCase();
+  if (badge) badge.innerText = 'CLAUDE';
 }
 
 function switchTab(tabId, sectionId) {
@@ -398,43 +396,37 @@ function switchTab(tabId, sectionId) {
 async function initApp() {
   loadPersonalLeads();
 
-  // Load AI Keys
-  document.getElementById('geminiKey').value = localStorage.getItem('geminiKey') || '';
-  document.getElementById('claudeKey').value = localStorage.getItem('claudeKey') || '';
-  document.getElementById('openaiKey').value = localStorage.getItem('openaiKey') || '';
-  document.getElementById('activeAi').value = localStorage.getItem('activeAi') || 'Gemini';
-  document.getElementById('activeAi').onchange = updateModelDropdown;
+  // Load AI Key
+  safeSetValue('claudeKey', localStorage.getItem('claudeKey') || '');
   updateModelDropdown();
 
   // Load Sender Identities
-  document.getElementById('uiuxSenderName').value = localStorage.getItem('uiuxSenderName') || 'Aryan';
-  document.getElementById('uiuxSenderTitle').value = localStorage.getItem('uiuxSenderTitle') || 'Partner, Labs22';
-  document.getElementById('uiuxSenderWeb').value = localStorage.getItem('uiuxSenderWeb') || 'labs22.com';
-  document.getElementById('uiuxEnoc').checked = localStorage.getItem('uiuxEnoc') !== 'false';
+  safeSetValue('uiuxSenderName', localStorage.getItem('uiuxSenderName') || 'Aryan');
+  safeSetValue('uiuxSenderTitle', localStorage.getItem('uiuxSenderTitle') || 'Partner, Labs22');
+  safeSetValue('uiuxSenderWeb', localStorage.getItem('uiuxSenderWeb') || 'labs22.com');
+  safeSetChecked('uiuxEnoc', localStorage.getItem('uiuxEnoc') !== 'false');
 
-  document.getElementById('brandingSenderName').value = localStorage.getItem('brandingSenderName') || '';
-  document.getElementById('brandingSenderTitle').value = localStorage.getItem('brandingSenderTitle') || 'Partner, Labs22';
-  document.getElementById('brandingSenderWeb').value = localStorage.getItem('brandingSenderWeb') || 'labs22.com';
-  document.getElementById('brandingEnoc').checked = localStorage.getItem('brandingEnoc') !== 'false';
+  safeSetValue('brandingSenderName', localStorage.getItem('brandingSenderName') || '');
+  safeSetValue('brandingSenderTitle', localStorage.getItem('brandingSenderTitle') || 'Partner, Labs22');
+  safeSetValue('brandingSenderWeb', localStorage.getItem('brandingSenderWeb') || 'labs22.com');
+  safeSetChecked('brandingEnoc', localStorage.getItem('brandingEnoc') !== 'false');
 
   // Prompts: always use the code constants directly. No localStorage caching.
   activeUiuxPrompt = DEFAULT_PROMPT;
   activeBrandingPrompt = BRANDING_PROMPT;
-  document.getElementById('uiuxPromptArea').value = activeUiuxPrompt;
-  document.getElementById('brandingPromptArea').value = activeBrandingPrompt;
+  safeSetValue('uiuxPromptArea', activeUiuxPrompt);
+  safeSetValue('brandingPromptArea', activeBrandingPrompt);
   console.log('[OutreachEngine] Prompts loaded from code constants (no cache).');
-  
-  switchMode(currentMode);
+
   updateActiveAiBadge();
 
-  // Load Leads
+  // Load leads BEFORE first render to prevent empty-state saves
   try {
     const saved = await window.electronAPI.loadState();
     if (saved && Array.isArray(saved)) {
       leads = saved;
       leads.forEach(l => {
         if (!l.mode) l.mode = 'uiux';
-        // Migrate old month-based leads to campaign system
         if (!l.campaign) {
           l.campaign = l.source === 'manual' ? 'Manual' : (l.csvSource || l.month || 'Imported');
         }
@@ -446,12 +438,17 @@ async function initApp() {
         activeCampaign = Object.keys(campaignCounts).sort((a,b) => campaignCounts[b] - campaignCounts[a])[0];
         localStorage.setItem('activeCampaign', activeCampaign);
       }
-      renderSidebar();
-
-      reassignBatches();
-      renderTable();
+      console.log(`[OutreachEngine] Loaded ${leads.length} leads.`);
+    } else {
+      console.warn('[OutreachEngine] No saved state found — starting with empty leads.');
     }
-  } catch(e) { console.error("LoadState fail:", e); }
+  } catch(e) { console.error('[OutreachEngine] LoadState fail:', e); }
+
+  // First render happens AFTER leads are loaded
+  switchMode(currentMode);
+  renderSidebar();
+  reassignBatches();
+  renderTable();
 
 }
 
@@ -1093,9 +1090,8 @@ function generateSequences(lead) {
 }
 
 async function processLead(lead) {
-  const provider = localStorage.getItem('activeAi') || 'Gemini';
-  const model = localStorage.getItem('activeModel') || 'gemini-1.5-pro';
-  const apiKey = localStorage.getItem(`${provider.toLowerCase()}Key`);
+  const model = localStorage.getItem('activeModel') || 'claude-sonnet-4-5';
+  const apiKey = localStorage.getItem('claudeKey');
   const sysPrompt = lead.mode === 'branding' ? activeBrandingPrompt : activeUiuxPrompt;
   
   try {
@@ -1149,38 +1145,17 @@ async function processLead(lead) {
         contentForAI;
     }
 
-    let response;
-    if (provider === 'Gemini') {
-      const schema = lead.mode === 'branding' ? BRANDING_SCHEMA : UIUX_SCHEMA;
-      response = await window.electronAPI.aiCall({
-        url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: { contents: [{ parts: [{ text: `${sysPrompt}\n\n${contentForAI}` }] }], generationConfig: { responseMimeType: 'application/json', responseSchema: schema, temperature: 0.2 } }
-      });
-    } else if (provider === 'Claude') {
-      response = await window.electronAPI.aiCall({
-        url: 'https://api.anthropic.com/v1/messages',
-        method: 'POST',
-        headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-        body: { model, max_tokens: 4096, temperature: 0.2, system: sysPrompt, messages: [{ role: 'user', content: `Analyze this website and return ONLY valid JSON:\n\n${contentForAI}` }] }
-      });
-    } else if (provider === 'OpenAI') {
-      response = await window.electronAPI.aiCall({
-        url: 'https://api.openai.com/v1/chat/completions',
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'content-type': 'application/json' },
-        body: { model, temperature: 0.2, messages: [{ role: 'system', content: sysPrompt }, { role: 'user', content: contentForAI }], response_format: { type: 'json_object' } }
-      });
-    }
+    const response = await window.electronAPI.aiCall({
+      url: 'https://api.anthropic.com/v1/messages',
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: { model, max_tokens: 4096, temperature: 0.2, system: sysPrompt, messages: [{ role: 'user', content: `Analyze this website and return ONLY valid JSON:\n\n${contentForAI}` }] }
+    });
 
     if (lead.status !== 'Processing') return;
     if (!response || !response.ok) throw new Error(`API error ${response?.status}: ${JSON.stringify(response?.data)}`);
 
-    let result;
-    if (provider === 'Gemini') result = response.data.candidates[0].content.parts[0].text;
-    else if (provider === 'Claude') result = response.data.content[0].text;
-    else if (provider === 'OpenAI') result = response.data.choices[0].message.content;
+    const result = response.data.content[0].text;
 
     let cleanResult = result.trim();
     const firstBrace = cleanResult.indexOf('{');
@@ -1211,27 +1186,30 @@ document.getElementById('modeUiux').onclick = () => switchMode('uiux');
 document.getElementById('modeBranding').onclick = () => switchMode('branding');
 document.getElementById('modePersonal').onclick = () => switchMode('personal');
 
+// Safe setter helpers — never crash if an element was removed from HTML
+function safeSetValue(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+function safeSetChecked(id, val) { const el = document.getElementById(id); if (el) el.checked = val; }
+function safeGetValue(id) { const el = document.getElementById(id); return el ? el.value : undefined; }
+function safeGetChecked(id) { const el = document.getElementById(id); return el ? el.checked : undefined; }
+
 document.getElementById('settingsBtn').onclick = () => {
     // Reload values to ensure no unsaved edits linger
-    document.getElementById('geminiKey').value = localStorage.getItem('geminiKey') || '';
-    document.getElementById('claudeKey').value = localStorage.getItem('claudeKey') || '';
-    document.getElementById('openaiKey').value = localStorage.getItem('openaiKey') || '';
-    document.getElementById('activeAi').value = localStorage.getItem('activeAi') || 'Gemini';
+    safeSetValue('claudeKey', localStorage.getItem('claudeKey') || '');
     updateModelDropdown();
-    
-    document.getElementById('uiuxSenderName').value = localStorage.getItem('uiuxSenderName') || '';
-    document.getElementById('uiuxSenderTitle').value = localStorage.getItem('uiuxSenderTitle') || '';
-    document.getElementById('uiuxSenderWeb').value = localStorage.getItem('uiuxSenderWeb') || '';
-    document.getElementById('uiuxEnoc').checked = localStorage.getItem('uiuxEnoc') !== 'false';
-    
-    document.getElementById('brandingSenderName').value = localStorage.getItem('brandingSenderName') || '';
-    document.getElementById('brandingSenderTitle').value = localStorage.getItem('brandingSenderTitle') || '';
-    document.getElementById('brandingSenderWeb').value = localStorage.getItem('brandingSenderWeb') || '';
-    document.getElementById('brandingEnoc').checked = localStorage.getItem('brandingEnoc') !== 'false';
 
-    document.getElementById('uiuxPromptArea').value = activeUiuxPrompt;
-    document.getElementById('brandingPromptArea').value = activeBrandingPrompt;
-    
+    safeSetValue('uiuxSenderName', localStorage.getItem('uiuxSenderName') || '');
+    safeSetValue('uiuxSenderTitle', localStorage.getItem('uiuxSenderTitle') || '');
+    safeSetValue('uiuxSenderWeb', localStorage.getItem('uiuxSenderWeb') || '');
+    safeSetChecked('uiuxEnoc', localStorage.getItem('uiuxEnoc') !== 'false');
+
+    safeSetValue('brandingSenderName', localStorage.getItem('brandingSenderName') || '');
+    safeSetValue('brandingSenderTitle', localStorage.getItem('brandingSenderTitle') || '');
+    safeSetValue('brandingSenderWeb', localStorage.getItem('brandingSenderWeb') || '');
+    safeSetChecked('brandingEnoc', localStorage.getItem('brandingEnoc') !== 'false');
+
+    safeSetValue('uiuxPromptArea', activeUiuxPrompt);
+    safeSetValue('brandingPromptArea', activeBrandingPrompt);
+
     // Always reset to the first tab (GENERAL & AI) when opening
     activateSettingsTab(0);
     document.getElementById('settingsModal').classList.add('active');
@@ -1241,27 +1219,45 @@ document.getElementById('cancelSettingsBtn').onclick = () => {
     document.getElementById('settingsModal').classList.remove('active');
 };
 
+document.getElementById('clearDataBtn').onclick = () => {
+  if (!confirm('Are you sure you want to clear ALL lead data? This cannot be undone.')) return;
+  if (!confirm('This will permanently delete all leads across every campaign. Confirm again to proceed.')) return;
+  leads = [];
+  personalLeads = [];
+  saveAllState();
+  savePersonalLeads();
+  localStorage.removeItem('batchEnocSettings');
+  batchEnocSettings = {};
+  renderSidebar();
+  renderTable();
+  document.getElementById('settingsModal').classList.remove('active');
+  alert('All lead data has been cleared.');
+};
+
 document.getElementById('closeSettingsBtn').onclick = () => {
-  localStorage.setItem('geminiKey', document.getElementById('geminiKey').value);
-  localStorage.setItem('claudeKey', document.getElementById('claudeKey').value);
-  localStorage.setItem('openaiKey', document.getElementById('openaiKey').value);
-  localStorage.setItem('activeAi', document.getElementById('activeAi').value);
-  localStorage.setItem('activeModel', document.getElementById('activeModel').value);
-  
-  localStorage.setItem('uiuxSenderName', document.getElementById('uiuxSenderName').value);
-  localStorage.setItem('uiuxSenderTitle', document.getElementById('uiuxSenderTitle').value);
-  localStorage.setItem('uiuxSenderWeb', document.getElementById('uiuxSenderWeb').value);
-  localStorage.setItem('uiuxEnoc', document.getElementById('uiuxEnoc').checked);
-  
-  localStorage.setItem('brandingSenderName', document.getElementById('brandingSenderName').value);
-  localStorage.setItem('brandingSenderTitle', document.getElementById('brandingSenderTitle').value);
-  localStorage.setItem('brandingSenderWeb', document.getElementById('brandingSenderWeb').value);
-  localStorage.setItem('brandingEnoc', document.getElementById('brandingEnoc').checked);
-  
+  // Only overwrite localStorage if the element exists — prevents wiping data when HTML changes
+  const safeSave = (key, id) => { const v = safeGetValue(id); if (v !== undefined) localStorage.setItem(key, v); };
+  const safeSaveCheck = (key, id) => { const v = safeGetChecked(id); if (v !== undefined) localStorage.setItem(key, v); };
+
+  safeSave('claudeKey', 'claudeKey');
+  safeSave('activeModel', 'activeModel');
+
+  safeSave('uiuxSenderName', 'uiuxSenderName');
+  safeSave('uiuxSenderTitle', 'uiuxSenderTitle');
+  safeSave('uiuxSenderWeb', 'uiuxSenderWeb');
+  safeSaveCheck('uiuxEnoc', 'uiuxEnoc');
+
+  safeSave('brandingSenderName', 'brandingSenderName');
+  safeSave('brandingSenderTitle', 'brandingSenderTitle');
+  safeSave('brandingSenderWeb', 'brandingSenderWeb');
+  safeSaveCheck('brandingEnoc', 'brandingEnoc');
+
   // Update in-memory prompts from textarea edits (used immediately by processLead)
-  activeUiuxPrompt = document.getElementById('uiuxPromptArea').value;
-  activeBrandingPrompt = document.getElementById('brandingPromptArea').value;
-  console.log('[OutreachEngine] Prompts updated from Settings textarea.');
+  const uiuxPrompt = safeGetValue('uiuxPromptArea');
+  const brandingPrompt = safeGetValue('brandingPromptArea');
+  if (uiuxPrompt !== undefined) activeUiuxPrompt = uiuxPrompt;
+  if (brandingPrompt !== undefined) activeBrandingPrompt = brandingPrompt;
+  console.log('[OutreachEngine] Settings saved.');
   updateActiveAiBadge();
   document.getElementById('settingsModal').classList.remove('active');
 };

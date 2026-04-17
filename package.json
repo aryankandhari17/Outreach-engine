@@ -5,12 +5,49 @@
   "description": "Native Electron App for Labs22 Cold Outreach Automation",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "publish": "electron-builder --mac --publish always"
+  },
+  "build": {
+    "appId": "com.labs22.outreachengine",
+    "productName": "OutreachEngine",
+    "publish": {
+      "provider": "github",
+      "owner": "aryankandhari17",
+      "repo": "Outreach-engine",
+      "private": true
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["arm64", "x64"] }
+      ],
+      "category": "public.app-category.business"
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "files": [
+      "**/*",
+      "!data/**",
+      "!.git/**",
+      "!*.md"
+    ],
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    }
   },
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "papaparse": "^5.4.1"
   },
   "devDependencies": {
-    "electron": "^28.0.0"
+    "electron": "^28.0.0",
+    "electron-builder": "^26.8.1"
   }
 }
