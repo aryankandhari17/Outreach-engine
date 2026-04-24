@@ -2431,6 +2431,37 @@ document.getElementById('savePersonalLeadBtn').onclick = () => {
   renderSidebar();
 };
 
+document.getElementById('exportPersonalBtn').onclick = async () => {
+  const inCampaign = personalLeads.filter(l => (l.campaign || 'Personal') === activeCampaign);
+  const statusFilter = document.getElementById('personalStatusFilter').value;
+  const search = (document.getElementById('personalSearchInput').value || '').toLowerCase();
+  const exportable = inCampaign.filter(l => {
+    if (statusFilter !== 'All' && l.status !== statusFilter) return false;
+    if (search && !`${l.company} ${l.contactName} ${l.relationship}`.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  if (exportable.length === 0) { alert('No personal leads match the current filters.'); return; }
+
+  const esc = str => !str ? '""' : `"${String(str).replace(/"/g, '""')}"`;
+  const maxEmails = exportable.reduce((m, l) => Math.max(m, (l.emails || []).length), 1);
+  const emailHeaders = [];
+  for (let i = 1; i <= maxEmails; i++) emailHeaders.push(`E${i} Subject`, `E${i} Body`);
+  let csv = ['Company', 'Contact Name', 'Contact Email', 'Website', 'Relationship', 'Campaign', 'Status', ...emailHeaders].join(',') + '\n';
+  exportable.forEach(l => {
+    const row = [esc(l.company), esc(l.contactName), esc(l.contactEmail), esc(l.website), esc(l.relationship), esc(l.campaign || 'Personal'), esc(l.status)];
+    for (let i = 0; i < maxEmails; i++) {
+      const em = (l.emails || [])[i] || { subject: '', body: '' };
+      row.push(esc(em.subject), esc(em.body));
+    }
+    csv += row.join(',') + '\n';
+  });
+
+  const date = new Date().toISOString().split('T')[0];
+  const slug = (activeCampaign || 'Personal').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'personal';
+  const saved = await window.electronAPI.saveCSV({ csvData: csv, suggestedName: `labs22-personal-${slug}-${date}.csv` });
+  if (saved) alert(`Exported ${exportable.length} personal lead${exportable.length === 1 ? '' : 's'}.`);
+};
+
 document.getElementById('leadWebsiteLink').onclick = () => {
   if (currentLeadInDetail && currentLeadInDetail.websiteURL && window.electronAPI && window.electronAPI.openExternal) {
     let url = currentLeadInDetail.websiteURL.trim();
