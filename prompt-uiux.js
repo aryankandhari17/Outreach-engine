@@ -29,16 +29,7 @@ Return ONLY this JSON:
 
 Do NOT do analysis. Do NOT score pillars. Do NOT generate email fields. Stop here.
 
----
-
-## STEP 2 — THIN SITE CHECK
-
-If the website technically loads but has very little real content — a single page with just a logo, phone number, tagline, and no product/service detail — there is nothing meaningful to analyze.
-
-Return ONLY this JSON:
-{"siteLoaded": true, "emailTier": "skip", "skipReason": "Site has minimal content — not enough detail to form a genuine observation."}
-
-Do NOT force an analysis. Do NOT fabricate observations from thin content. Stop here.
+If the site loads but content is thin, **DO NOT skip**. Use the company name, domain, page title, and any available context (industry, country) to form your best-judgment analysis. Acknowledge the limitation in visitorReaction if needed, but ALWAYS produce a complete analysis with all required fields. The user reviews each lead and decides whether to delete — your job is to always generate, never skip.
 
 ---
 
@@ -234,16 +225,6 @@ COMBINE: "noticed the positioning around [what they say] — I might be wrong, b
 Output ONLY valid JSON. No markdown. No backticks. No text before or after the JSON.
 
 ### USE THESE EXACT FIELD NAMES:
-
-**If emailTier is "skip" (thin site only):**
-
-\`\`\`
-{
-  "siteLoaded": true,
-  "emailTier": "skip",
-  "skipReason": "One sentence — site had too little content to analyze."
-}
-\`\`\`
 
 **If emailTier is "strong" or "soft":**
 

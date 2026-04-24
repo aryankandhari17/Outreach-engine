@@ -24,20 +24,7 @@ Return only:
 
 Stop. Do nothing else.
 
----
-
-## STEP 1.5 — THIN SITE CHECK
-
-If the website technically loads but has very little real content — a single page with just a logo, phone number, tagline, and no product/service detail — there is nothing meaningful to analyze.
-
-**Hard floor:** If the total meaningful text content (excluding navigation labels, footer links, menu items, and repeated elements) is under 200 characters, treat this as a thin site regardless of what that text contains. A page title, a tagline, and a category label is not enough to form a genuine brand observation. Do NOT attempt to stretch a page title into a full analysis.
-
-**The padding test:** If the only way to write an observation is to rephrase the same 1-2 facts in multiple ways (e.g., repeating "Arabica coffee" and "Indian chain" across every field because that's all you have), the site is too thin. Skip it.
-
-Return ONLY this JSON:
-{"siteLoaded": true, "emailTier": "skip", "skipReason": "Site has minimal content — not enough detail to assess brand presence."}
-
-Do NOT force an analysis. Do NOT fabricate observations from thin content. Stop here.
+If the site loads but content is thin, **DO NOT skip**. Use the company name, domain, page title, and any available context (industry, country) to form your best-judgment analysis. Acknowledge the limitation in visitorReaction if needed, but ALWAYS produce a complete analysis with all required fields. The user reviews and decides whether to delete — your job is to always generate, never skip.
 
 ---
 
@@ -226,7 +213,7 @@ When brandStrength is 4-5, this is a well-branded company. Do NOT skip it. Inste
 
 Generate a compliment email that recognises their brand thinking. This is NOT a pitch. It's a genuine observation from one design-minded person to another.
 
-The ONLY time you skip is when the site loaded but had too little content to analyze (thin site check). Every site with real content gets an email — strong, soft, or compliment.
+You NEVER skip a lead. Every site that loads gets an email — strong, soft, or compliment. If content is thin, use what you have (company name, domain, title, industry) and acknowledge limitations in visitorReaction. The user reviews and deletes manually if needed.
 
 ### THE QUALITY TEST (for strong and soft tiers):
 - Could I copy this brand_observation to another company in the same industry and it would still work? If yes → it's too generic → rewrite.
@@ -359,14 +346,6 @@ Pointers should focus on:
 Return ONLY valid JSON. No markdown. No backticks. No text before or after.
 
 ### USE THESE EXACT FIELD NAMES:
-
-**If emailTier is "skip" (thin site only):**
-
-{
-  "siteLoaded": true,
-  "emailTier": "skip",
-  "skipReason": "One sentence — site had too little content to analyze."
-}
 
 **If emailTier is "strong" or "soft":**
 
@@ -535,7 +514,7 @@ labs22.com
 3. For strong/soft: Does it suggest the differentiator could be EVEN MORE VISIBLE — not that the brand is bad?
 4. For strong/soft: Is the tone warm and encouraging, not critical or salesy?
 5. For compliment: Does brand_compliment name a SPECIFIC brand decision, not vague praise?
-6. Could you copy this observation to another company and it still works? Specifically: if you replaced the company name with any other company in the same sector (any other Indian coffee chain, any other Australian retailer, etc.), would the email still make sense? If yes, the scrape was too thin to generate a real observation — change emailTier to "skip" instead of forcing generic content.
+6. Could you copy this observation to another company and it still works? Specifically: if you replaced the company name with any other company in the same sector (any other Indian coffee chain, any other Australian retailer, etc.), would the email still make sense? If yes, push harder to find what's specific to THIS company — their actual name, the specific words from their title, their domain, their stated industry. Do NOT skip; do NOT default to generic phrasing. The user can review and delete if the result is too thin.
 7. Are all pointers/what_works specific to THIS company's actual products or brand elements?
 8. Did you use any generic lines about phones, Instagram, or how people discover brands? REMOVE.
 9. Did you mention outdated news or blog posts? REMOVE.
@@ -545,5 +524,48 @@ labs22.com
 13. Does the observation contain any of these phrases: "doesn't match", "doesn't carry", "doesn't capture", "undercut", "lacking", "failing"? If yes, REWRITE with warmer language.
 14. Did you comment on visual identity, logo, color palette, photography, or packaging aesthetics without the text explicitly describing those elements? If yes, REMOVE — you cannot see visuals.
 15. Did you use "quality," "innovation," or "excellence" as the differentiator without specific evidence backing it? If yes, dig deeper or acknowledge the site lacks a clear differentiator.
-16. THE PADDING TEST: Read your entire output. Are you rephrasing the same 1-2 facts across opening_line, brand_observation, and pointers because that's all the site gave you? If every field is a variation of the same thin claim, the site did not give you enough to work with. Change emailTier to "skip" with skipReason explaining insufficient content. A skipped lead with honest reasoning is better than a sent email that makes Labs22 look like it uses a bot.
+16. THE PADDING TEST: Read your entire output. Are you rephrasing the same 1-2 facts across opening_line, brand_observation, and pointers because that's all the site gave you? If yes, vary the angles — talk about the company name itself, what the title implies about positioning, what the sector/country context suggests, what the domain choice signals. Always produce a complete analysis. Do NOT skip. The user reviews each lead and deletes if it doesn't meet the bar.
+
+---
+
+## EXAMPLE — STRONG OUTPUT (warmer tone):
+
+\`\`\`json
+{
+  "siteLoaded": true,
+  "emailTier": "strong",
+  "sector": "specialty coffee / packaged beverages",
+  "brandStrength": 2,
+  "differentiator": "Direct trade sourcing from 24 countries with single-origin selections and rare lots like Panama Esmeralda",
+  "visitorReaction": "This is clearly a serious coffee operation — 10+ branches, direct trade from 24 countries, rare lots on the retail shelf. The sourcing depth and the specialty-grade quality are genuinely impressive. There's a lot of story here that the brand could be doing more with.",
+  "industry": "specialty coffee",
+  "opening_line": "I came across Roasters while looking at specialty coffee brands in Dubai — 10+ branches, direct trade from 24 countries, Panama Esmeralda on the retail shelf, and international franchise plans. Clearly a serious operation.",
+  "brand_observation": "the direct-trade sourcing from 24 countries and the single-origin selection is a genuinely compelling story — there's an opportunity for that to lead the entire brand experience, from how the products are named and described to how the story is told across the site, rather than living mainly on one page",
+  "pointers": [
+    "Bringing the direct-trade sourcing language onto the product pages and collection introductions — not just the about section — would mean every touchpoint reinforces what makes the coffee worth seeking out",
+    "Making the single-origin range naming reflect the sourcing story more clearly — so a first-time visitor browsing products immediately picks up on the depth and rarity without needing to dig into the backstory",
+    "Tightening the consistency of the sourcing and origin messaging across the homepage, about page, and product pages — so the 24-country direct-trade story is echoed everywhere, not just mentioned once and left behind"
+  ]
+}
+\`\`\`
+
+## EXAMPLE — COMPLIMENT OUTPUT (for a well-branded company):
+
+\`\`\`json
+{
+  "siteLoaded": true,
+  "emailTier": "compliment",
+  "sector": "artisan chocolate / gifting",
+  "brandStrength": 5,
+  "differentiator": "French heritage chocolatier with handcrafted collections positioned at the luxury gifting end of the market",
+  "visitorReaction": "The brand feels intentional from the first second — the way the collections are named, the corporate gifting positioned as a service, and the consistent messaging around heritage and craft. It's clear someone is thinking about this as a luxury experience, not just a product.",
+  "industry": "artisan chocolate and luxury gifting",
+  "opening_line": "I came across Maison Duffour while looking at artisan chocolate brands in Dubai — the French heritage, the handcrafted collections, and the corporate gifting positioning for what looks like some serious clients. Impressive operation.",
+  "brand_compliment": "the way the collection naming and the corporate gifting framing work together to position this as a luxury experience — not just a chocolate brand — is exactly the kind of brand thinking that justifies premium pricing without needing to explain it",
+  "what_works": [
+    "The collection-based product architecture — where each range has its own identity while still feeling part of the same house — makes the gifting selection feel curated rather than overwhelming",
+    "The corporate gifting section is positioned as a service, not just a product catalog — which is smart because it shifts the conversation from price-per-box to value-of-experience, which is where premium brands win"
+  ]
+}
+\`\`\`
 `;

@@ -1134,12 +1134,11 @@ async function processLead(lead) {
         lead.websiteURL && `Domain: ${lead.websiteURL}`
       ].filter(Boolean).join('\n');
 
-      contentForAI = `[SCRAPER NOTE — MANDATORY OVERRIDE: This site uses client-side JavaScript rendering. ` +
+      contentForAI = `[SCRAPER NOTE: This site uses client-side JavaScript rendering. ` +
         `The text below is sparse because the scraper can only read static HTML — the actual site content loads via JavaScript. ` +
         `This is a technical scraper limitation, NOT evidence of a thin or empty site. ` +
-        `RULE: You are FORBIDDEN from returning emailTier "skip" for this lead. ` +
-        `RULE: You are FORBIDDEN from applying STEP 1.5 (thin site check). ` +
-        `RULE: If the scraped text is too sparse for full analysis, use the company name and domain below to form your best judgment and assign emailTier "3" (soft reach). ` +
+        `Use the company name, domain, page title, and any sector/country context to produce a complete analysis. ` +
+        `Assign emailTier "soft" by default for SPA sites with sparse text. ` +
         `Only return siteLoaded: false if the content explicitly says "domain not found", "404", or "coming soon".]\n\n` +
         (leadContext ? `[KNOWN LEAD DATA]\n${leadContext}\n\n` : '') +
         contentForAI;
@@ -1165,10 +1164,12 @@ async function processLead(lead) {
     }
     lead.analysis = JSON.parse(cleanResult);
     if (lead.analysis.industry) lead.industry = lead.analysis.industry;
+    lead.errorMsg = undefined;
     console.log('[OutreachEngine] AI response for', lead.company, '→ emailTier:', lead.analysis.emailTier, '| siteLoaded:', lead.analysis.siteLoaded, '| full:', cleanResult.slice(0, 300));
 
-    if (!lead.analysis.siteLoaded || lead.analysis.emailTier === 'skip') {
-      lead.status = 'Skipped';
+    if (!lead.analysis.siteLoaded) {
+      lead.status = 'Error';
+      lead.errorMsg = `Site could not be analyzed (likely parked, broken, or 404): ${lead.websiteURL}`;
     } else {
       lead.sequence = generateSequences(lead);
       lead.status = 'Ready';
