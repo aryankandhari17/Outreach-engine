@@ -319,6 +319,9 @@ th, td {
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   font-size: 13px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
 }
 
 th:last-child, td:last-child {
