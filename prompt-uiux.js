@@ -321,7 +321,7 @@ Small UX tweaks here often lift enquiries without changing traffic.
 Out of curiosity, is improving the website experience part of your roadmap this year?
 
 
-— Aryan
+Aryan
 Partner, Labs22
 labs22.com
 
@@ -338,7 +338,7 @@ Following up on my note — here are a few things I noticed:
 
 These are the kinds of small changes that tend to shift how visitors perceive a business — not a redesign, but targeted refinements that make the difference between someone browsing and someone reaching out.
 
-— Aryan
+Aryan
 Partner, Labs22
 labs22.com
 
@@ -353,7 +353,7 @@ We specialise in UX and digital experience design — making sure websites conve
 
 If this is ever relevant, happy to exchange notes.
 
-— Aryan
+Aryan
 
 ---
 
@@ -368,7 +368,7 @@ Your site is cleaner than most in your space, which is rare. But even well-built
 
 If that's ever useful to explore, happy to share what we'd look at. No obligation.
 
-— Aryan
+Aryan
 Partner, Labs22
 labs22.com
 
@@ -385,7 +385,7 @@ For companies with a solid foundation like yours, small refinements tend to have
 
 If this is ever relevant, happy to chat. If not, no worries at all.
 
-— Aryan
+Aryan
 Partner, Labs22
 labs22.com
 
@@ -404,7 +404,7 @@ We think about UX the same way — decisions shaped by how people actually behav
 
 If you ever need an extra pair of hands on a project, we'd enjoy working with a team that thinks this way.
 
-— Aryan
+Aryan
 Partner, Labs22
 labs22.com
 
@@ -427,6 +427,7 @@ labs22.com
 13. Would Aryan send this email without editing?
 14. Could you copy this observation to another company in the same industry and it still works? If yes, it's too generic — rewrite.
 15. Does the evidence support the route? If "what's confusing" is empty but you routed to strong — CHANGE THE ROUTE.
+16. Does specific_observation contain an em-dash ("—") used as a mid-sentence aside or qualifier clause? If yes, REWRITE as two shorter sentences. Example: replace "it's not clear who the site is speaking to — whether that's owners, managers, or contractors — and without that, it's hard to tell if it fits" with "it's not clear who the site is speaking to. Owners, managers, and contractors would each approach the site differently, and without knowing which one it's built for, it's hard to tell if it fits." Em-dashes as sentence breaks make observations harder to read.
 
 ---
 

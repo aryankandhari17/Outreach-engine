@@ -1366,7 +1366,7 @@ function generateSequences(lead) {
   const isBranding = lead.mode === 'branding';
   const obs = isBranding ? a.brand_observation : a.specific_observation;
   const pointers = (a.pointers || []).map(p => `• ${p}`).join('\n');
-  const sig = `— ${s.name}\n${s.title}\n${s.web}`;
+  const sig = `${s.name}\n${s.title}\n${s.web}`;
 
   if (isBranding) {
     if (tier === 'compliment') {
@@ -1382,7 +1382,7 @@ function generateSequences(lead) {
         e2s: `Re: ${company}'s brand`,
         e2b: `Hi ${firstName},\n\nFollowing up on my note — here are a few things I noticed:\n\n${pointers}\n\nThese are the kinds of refinements that can shift how customers experience a brand — not a full redesign, but targeted changes that help the brand tell more of the story the product already delivers.\n\n${sig}`,
         e3s: `Re: quick thoughts`,
-        e3b: `Hi ${firstName},\n\nJust nudging this in case it got buried.\n\nWe specialise in brand identity and packaging design — helping companies make the most of what already makes them great.\n\nIf this is ever relevant, happy to exchange notes.\n\n— ${s.name}`
+        e3b: `Hi ${firstName},\n\nJust nudging this in case it got buried.\n\nWe specialise in brand identity and packaging design — helping companies make the most of what already makes them great.\n\nIf this is ever relevant, happy to exchange notes.\n\n${s.name}`
       };
     } else {
       return {
@@ -1406,7 +1406,7 @@ function generateSequences(lead) {
         e2s: `Re: ${company}'s website`,
         e2b: `Hi ${firstName},\n\nFollowing up on my note — here are a few things I noticed:\n\n${pointers}\n\nThese are the kinds of small changes that tend to shift how visitors perceive a business — not a redesign, but targeted refinements that make the difference between someone browsing and someone reaching out.\n\n${sig}`,
         e3s: `Re: quick thoughts`,
-        e3b: `Hi ${firstName},\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — making sure websites convert visitors into customers as effectively as the business deserves.\n\nIf this is ever relevant, happy to exchange notes.\n\n— ${s.name}`
+        e3b: `Hi ${firstName},\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — making sure websites convert visitors into customers as effectively as the business deserves.\n\nIf this is ever relevant, happy to exchange notes.\n\n${s.name}`
       };
     } else {
       return {
@@ -1415,7 +1415,7 @@ function generateSequences(lead) {
         e2s: `Re: ${company}'s site`,
         e2b: `Hi ${firstName},\n\nFollowing up on my note — a couple of ideas that might be worth exploring:\n\n${pointers}\n\nThese aren't big overhauls — more the kind of refinements that tend to shift how visitors engage with a site that already has a solid foundation.\n\n${sig}`,
         e3s: `Re: quick thoughts`,
-        e3b: `Hi ${firstName},\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — helping companies with strong foundations get even more out of their websites.\n\nOut of curiosity, is improving the website experience part of your roadmap this year?\n\n— ${s.name}`
+        e3b: `Hi ${firstName},\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — helping companies with strong foundations get even more out of their websites.\n\nOut of curiosity, is improving the website experience part of your roadmap this year?\n\n${s.name}`
       };
     }
   }

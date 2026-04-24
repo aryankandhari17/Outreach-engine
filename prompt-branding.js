@@ -423,7 +423,7 @@ Hi {First Name},
 
 I might be wrong, but {brand_observation}.
 
-— Aryan
+Aryan
 Partner, Labs22
 labs22.com
 
@@ -440,7 +440,7 @@ Following up on my note — here are a few things I noticed:
 
 These are the kinds of refinements that can shift how customers experience a brand — not a full redesign, but targeted changes that help the brand tell more of the story the product already delivers.
 
-— Aryan
+Aryan
 Partner, Labs22
 labs22.com
 
@@ -455,7 +455,7 @@ We specialise in brand identity and packaging design — helping companies make 
 
 If this is ever relevant, happy to exchange notes.
 
-— Aryan
+Aryan
 
 ---
 
@@ -470,7 +470,7 @@ Your brand is stronger than most in your space, which is rare. I noticed a coupl
 
 If that's ever useful to explore, happy to share what we'd look at. No obligation.
 
-— Aryan
+Aryan
 Partner, Labs22
 labs22.com
 
@@ -487,7 +487,7 @@ For brands with a solid foundation like yours, small refinements tend to have an
 
 If this is ever relevant, happy to chat. If not, no worries at all.
 
-— Aryan
+Aryan
 Partner, Labs22
 labs22.com
 
@@ -504,7 +504,7 @@ Hi {First Name},
 
 If you ever need extra hands on a brand project or want a second pair of eyes on something, we'd be happy to help.
 
-— Aryan
+Aryan
 Partner, Labs22
 labs22.com
 
@@ -522,7 +522,7 @@ These details show someone on your team is thinking about the brand experience d
 
 No pitch here — just wanted to share the observation. If there's ever a project where you need brand or design support, we'd be glad to chat.
 
-— Aryan
+Aryan
 Partner, Labs22
 labs22.com
 
@@ -545,5 +545,6 @@ labs22.com
 13. Does the observation contain any of these phrases: "doesn't match", "doesn't carry", "doesn't capture", "undercut", "lacking", "failing"? If yes, REWRITE with warmer language.
 14. Did you comment on visual identity, logo, color palette, photography, or packaging aesthetics without the text explicitly describing those elements? If yes, REMOVE — you cannot see visuals.
 15. Did you use "quality," "innovation," or "excellence" as the differentiator without specific evidence backing it? If yes, dig deeper or acknowledge the site lacks a clear differentiator.
-16. THE PADDING TEST: Read your entire output. Are you rephrasing the same 1-2 facts across opening_line, brand_observation, and pointers because that's all the site gave you? If every field is a variation of the same thin claim, the site did not give you enough to work with. Change emailTier to "skip" with skipReason explaining insufficient content. A skipped lead with honest reasoning is better than a sent email that makes Labs22 look like it uses a bot.
+16. Does brand_observation contain an em-dash ("—") used as a mid-sentence aside or qualifier clause? If yes, REWRITE as two shorter sentences. Example: replace "the brand doesn't quite carry the story — whether through naming, messaging, or imagery — the way the product deserves" with "the brand doesn't quite carry the story the product deserves. The naming, messaging, and imagery could each do more of that work than they currently do." Em-dashes as sentence breaks make observations harder to read.
+17. THE PADDING TEST: Read your entire output. Are you rephrasing the same 1-2 facts across opening_line, brand_observation, and pointers because that's all the site gave you? If every field is a variation of the same thin claim, the site did not give you enough to work with. Change emailTier to "skip" with skipReason explaining insufficient content. A skipped lead with honest reasoning is better than a sent email that makes Labs22 look like it uses a bot.
 `;
