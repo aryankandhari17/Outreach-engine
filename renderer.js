@@ -64,7 +64,9 @@ let currentProcessingBatch = null;
 let cancelProcessing = false;
 let currentMode = localStorage.getItem('currentMode') || 'uiux';
 let activeCampaign = localStorage.getItem('activeCampaign') || 'Manual';
+const CAMPAIGN_REGISTRY_KEY = 'campaignRegistryV1';
 let sidebarOpen = localStorage.getItem('sidebarOpen') !== 'false';
+let campaignRegistry = [];
 
 // Tier grouping state — persists collapse state across re-renders
 const tierCollapseState = {};
@@ -75,13 +77,118 @@ try { const s = localStorage.getItem('batchEnocSettings'); if (s) batchEnocSetti
 const TIER_ORDER = ['strong', 'soft', 'compliment'];
 const TIER_LABELS = { strong: 'Strong Critique', soft: 'Soft Observation', compliment: 'Compliment' };
 const TIER_COLORS = { strong: '#EF4444', soft: '#F59E0B', compliment: '#10B981' };
-const BATCH_LEAD_DELAY_MS = 20000;
+const BATCH_LEAD_DELAY_MS = 45000;
 const AI_MAX_CONTENT_CHARS = 3200;
 const AI_MAX_429_RETRIES = 3;
 const AI_429_BASE_DELAY_MS = 15000;
 const AI_REPAIR_MAX_TOKENS = 1200;
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+function normalizeCampaignName(name) {
+  return String(name || '').trim();
+}
+
+function loadCampaignRegistry() {
+  campaignRegistry = [];
+  try {
+    const raw = localStorage.getItem(CAMPAIGN_REGISTRY_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return;
+    const seen = new Set();
+    parsed.forEach(entry => {
+      const name = normalizeCampaignName(typeof entry === 'string' ? entry : entry?.name);
+      if (!name || seen.has(name)) return;
+      seen.add(name);
+      campaignRegistry.push({
+        name,
+        createdAt: (typeof entry === 'object' && entry?.createdAt) ? entry.createdAt : new Date().toISOString()
+      });
+    });
+  } catch (e) {
+    campaignRegistry = [];
+  }
+}
+
+function saveCampaignRegistry() {
+  localStorage.setItem(CAMPAIGN_REGISTRY_KEY, JSON.stringify(campaignRegistry));
+}
+
+function ensureCampaignExists(name, createdAt = new Date().toISOString()) {
+  const cleanName = normalizeCampaignName(name);
+  if (!cleanName) return false;
+  const existing = campaignRegistry.find(c => c.name === cleanName);
+  if (existing) return false;
+  campaignRegistry.push({ name: cleanName, createdAt });
+  saveCampaignRegistry();
+  return true;
+}
+
+function renameCampaignInRegistry(oldName, newName) {
+  const oldClean = normalizeCampaignName(oldName);
+  const newClean = normalizeCampaignName(newName);
+  if (!oldClean || !newClean || oldClean === newClean) return;
+
+  const existing = campaignRegistry.find(c => c.name === oldClean);
+  if (existing) {
+    existing.name = newClean;
+    saveCampaignRegistry();
+  } else {
+    ensureCampaignExists(newClean);
+  }
+}
+
+function removeCampaignFromRegistry(name) {
+  const cleanName = normalizeCampaignName(name);
+  if (!cleanName) return;
+  const next = campaignRegistry.filter(c => c.name !== cleanName);
+  if (next.length === campaignRegistry.length) return;
+  campaignRegistry = next;
+  saveCampaignRegistry();
+}
+
+function syncCampaignRegistryWithLeads() {
+  const nowIso = new Date().toISOString();
+  const byName = new Map();
+  let changed = false;
+
+  campaignRegistry.forEach(c => {
+    const name = normalizeCampaignName(c?.name);
+    if (!name) {
+      changed = true;
+      return;
+    }
+    if (!byName.has(name)) {
+      byName.set(name, { name, createdAt: c?.createdAt || nowIso });
+    } else {
+      changed = true;
+    }
+  });
+
+  leads.forEach(l => {
+    const campaignName = normalizeCampaignName(l.campaign || 'Manual');
+    if (!campaignName) return;
+    if (!byName.has(campaignName)) {
+      byName.set(campaignName, { name: campaignName, createdAt: l.dateAdded || nowIso });
+      changed = true;
+      return;
+    }
+    if (l.dateAdded && l.dateAdded < byName.get(campaignName).createdAt) {
+      byName.get(campaignName).createdAt = l.dateAdded;
+      changed = true;
+    }
+  });
+
+  const activeName = normalizeCampaignName(activeCampaign) || 'Manual';
+  if (!byName.has(activeName)) {
+    byName.set(activeName, { name: activeName, createdAt: nowIso });
+    changed = true;
+  }
+
+  campaignRegistry = Array.from(byName.values());
+  if (changed) saveCampaignRegistry();
+}
 
 function trimAiContent(text, maxChars = AI_MAX_CONTENT_CHARS) {
   const value = String(text || '');
@@ -165,6 +272,7 @@ function applySidebarState() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  loadCampaignRegistry();
   applySidebarState();
 
   const toggleBtn = document.getElementById('sidebarToggleBtn');
@@ -194,9 +302,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = card.querySelector('.new-campaign-input');
     input.focus();
     const commit = () => {
-      const name = input.value.trim();
+      const name = normalizeCampaignName(input.value);
       card.remove();
       if (!name) return;
+      ensureCampaignExists(name);
       activeCampaign = name;
       localStorage.setItem('activeCampaign', activeCampaign);
       renderSidebar(); reassignBatches(); renderTable();
@@ -244,9 +353,13 @@ function renderSidebar() {
   const container = document.getElementById('campaignListContainer');
   const badge = document.getElementById('activeMonthBadge');
   if (!container || !badge) return;
+  syncCampaignRegistryWithLeads();
 
   // Build campaign map: name → { earliestDate, count, done }
   const campaignMap = {};
+  campaignRegistry.forEach(c => {
+    campaignMap[c.name] = { date: c.createdAt || new Date().toISOString(), count: 0, done: 0 };
+  });
   leads.forEach(l => {
     const c = l.campaign || 'Manual';
     if (!campaignMap[c]) {
@@ -352,9 +465,16 @@ function renderSidebar() {
       nameDiv.replaceWith(input);
       input.focus(); input.select();
       const commit = () => {
-        const newName = input.value.trim() || c;
+        const newName = normalizeCampaignName(input.value) || c;
+        const duplicateName = newName !== c && campaignRegistry.some(item => item.name === newName);
+        if (duplicateName) {
+          alert(`Campaign "${newName}" already exists.`);
+          renderSidebar();
+          return;
+        }
         if (newName !== c) {
           leads.forEach(l => { if (l.campaign === c) l.campaign = newName; });
+          renameCampaignInRegistry(c, newName);
           if (activeCampaign === c) { activeCampaign = newName; localStorage.setItem('activeCampaign', newName); }
           saveAllState();
         }
@@ -373,8 +493,13 @@ function renderSidebar() {
     el.querySelector('.delete-yes-btn').onclick = (e) => {
       e.stopPropagation();
       leads = leads.filter(l => l.campaign !== c);
+      removeCampaignFromRegistry(c);
       if (activeCampaign === c) {
-        const remaining = [...new Set(leads.map(l => l.campaign).filter(Boolean))];
+        const remaining = campaignRegistry.map(item => item.name).filter(Boolean);
+        if (remaining.length === 0) {
+          ensureCampaignExists('Manual');
+          remaining.push('Manual');
+        }
         activeCampaign = remaining[0] || 'Manual';
         localStorage.setItem('activeCampaign', activeCampaign);
       }
@@ -463,6 +588,7 @@ function switchTab(tabId, sectionId) {
 
 async function initApp() {
   loadPersonalLeads();
+  loadCampaignRegistry();
 
   // Load AI Key
   safeSetValue('claudeKey', localStorage.getItem('claudeKey') || '');
@@ -499,13 +625,7 @@ async function initApp() {
           l.campaign = l.source === 'manual' ? 'Manual' : (l.csvSource || l.month || 'Imported');
         }
       });
-      // If activeCampaign has no leads but other campaigns do, auto-select the best one
-      const campaignCounts = {};
-      leads.forEach(l => { campaignCounts[l.campaign] = (campaignCounts[l.campaign] || 0) + 1; });
-      if (!campaignCounts[activeCampaign] && Object.keys(campaignCounts).length > 0) {
-        activeCampaign = Object.keys(campaignCounts).sort((a,b) => campaignCounts[b] - campaignCounts[a])[0];
-        localStorage.setItem('activeCampaign', activeCampaign);
-      }
+      syncCampaignRegistryWithLeads();
       console.log(`[OutreachEngine] Loaded ${leads.length} leads.`);
     } else {
       console.warn('[OutreachEngine] No saved state found — starting with empty leads.');
@@ -857,7 +977,8 @@ function renderTable() {
       currentProcessingBatch = batchKey;
       isProcessing = true; cancelProcessing = false;
       renderTable();
-      for (let l of list) {
+      for (let i = 0; i < list.length; i++) {
+        const l = list[i];
         if (cancelProcessing) break;
         if (l.status === 'Queued' || l.status === 'Error') {
           l.status = 'Processing';
@@ -865,7 +986,10 @@ function renderTable() {
           await processLead(l);
           saveAllState();
           if (!cancelProcessing && currentProcessingBatch === batchKey) {
-            await wait(BATCH_LEAD_DELAY_MS);
+            const hasMorePending = list.slice(i + 1).some(nextLead => nextLead.status === 'Queued' || nextLead.status === 'Error');
+            if (hasMorePending) {
+              await wait(BATCH_LEAD_DELAY_MS);
+            }
           }
         }
       }
@@ -1515,7 +1639,9 @@ function updateCountryFilter() {
 document.getElementById('manualAddBtn').onclick = () => {
   const url = document.getElementById('manualUrl').value.trim();
   const emails = document.getElementById('manualEmails').value.split(',').map(e=>e.trim()).filter(e=>e);
+  const campaignName = normalizeCampaignName(activeCampaign) || 'Manual';
   if (!url || emails.length === 0) { alert('Website URL and at least one Email are required.'); return; }
+  ensureCampaignExists(campaignName);
   
   let addedCount = 0;
   let dupeCount = 0;
@@ -1528,7 +1654,7 @@ document.getElementById('manualAddBtn').onclick = () => {
         firstName: document.getElementById('manualFirstName').value,
         company: document.getElementById('manualCompany').value,
         websiteURL: url, email: e, country: document.getElementById('manualCountry').value,
-        status: 'Queued', source: 'manual', mode: currentMode, campaign: 'Manual', dateAdded: new Date().toISOString()
+        status: 'Queued', source: 'manual', mode: currentMode, campaign: campaignName, dateAdded: new Date().toISOString()
       });
       addedCount++;
     } else {
@@ -1704,6 +1830,9 @@ document.getElementById('processNextBatchBtn').onclick = async () => {
     if (cancelProcessing) break;
     leadsToProcess[i].status = 'Processing'; renderTable();
     await processLead(leadsToProcess[i]);
+    if (!cancelProcessing && i < leadsToProcess.length - 1) {
+      await wait(BATCH_LEAD_DELAY_MS);
+    }
   }
 
   isProcessing = false; cancelProcessing = false;
