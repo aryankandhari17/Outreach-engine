@@ -208,9 +208,9 @@ Before generating any email fields, verify the route matches the evidence.
 
 ### FOR STRONG AND SOFT TIERS:
 
-**opening_line:** One complete sentence. How you came across them and what you noticed about their positioning. Must describe what they do naturally and reference something specific their site says.
+**opening_line:** One complete sentence. How you came across them and what you noticed about their positioning. Must describe what they do naturally and reference something specific their site says. Never use em-dashes ("—") — use periods or commas instead. CRITICAL: If the website presents the company under a different brand name than the one provided in the input (e.g., input says "CCK Financial Solutions" but the site brands itself as "Guava Treasury Solutions"), you MUST use the company name from the input data, not the product brand name on the site. The subject line uses the input company name — the body must match.
 
-**specific_observation:** The observation that goes after "I might be wrong, but" in the email. 1-2 sentences. References what their site claims, then notes what a first-time visitor still can't easily figure out. Starts lowercase. No ending period.
+**specific_observation:** The observation that goes after "I might be wrong, but" in the email. 1-2 sentences. References what their site claims, then notes what a first-time visitor still can't easily figure out. Starts lowercase. No ending period. Never use em-dashes ("—") — use periods or commas instead. CRITICAL: The observation must NOT contain the word "but" as its own connector. Since the template already prepends "I might be wrong, but", writing "but" inside the observation produces "I might be wrong, but X, but Y" — broken output. Instead of "X does Y, but as a first-time visitor Z", write "as a first-time visitor Z, despite X doing Y". The observation should flow as a single clean thought after "I might be wrong, but".
 
 Only use this format if there is a concrete, evidence-backed issue.
 
@@ -219,7 +219,7 @@ Part A — Reference what their site actually says about themselves. Their posit
 Part B — Note what a first-time visitor still can't easily figure out DESPITE what the site says.
 COMBINE: "noticed the positioning around [what they say] — I might be wrong, but as a first-time visitor it's still [what's unclear or missing]"
 
-**pointers:** Three specific, helpful suggestions. Each must be 20+ words, specific to THIS site, and framed as helpful improvements — not criticism. NEVER mention outdated content, blog posts, or news sections.
+**pointers:** Three specific, helpful suggestions. Each must be 20+ words, specific to THIS site, and framed as helpful improvements — not criticism. NEVER mention outdated content, blog posts, or news sections. Never use em-dashes ("—") inside a pointer — use periods or commas instead.
 
 ### FOR COMPLIMENT TIER:
 
@@ -264,8 +264,8 @@ Output ONLY valid JSON. No markdown. No backticks. No text before or after the J
   },
   "mostPainful": "positioning",
   "industry": "the company's actual industry described naturally, like you would tell a friend. e.g. market entry advisory, luxury real estate, fintech platform. NOT a database label.",
-  "opening_line": "One complete sentence. How you came across them and what you noticed about their positioning. Must describe what they do naturally and reference something specific their site says.",
-  "specific_observation": "1-2 sentences. Flows after 'I might be wrong, but'. Notes what a first-time visitor still can't easily figure out DESPITE what the site says. References what they claim, then notes the gap. Starts lowercase. No ending period.",
+  "opening_line": "One complete sentence. How you came across them and what you noticed about their positioning. Must describe what they do naturally and reference something specific their site says. Use input company name, not any brand name found on site.",
+  "specific_observation": "1-2 sentences. Flows after 'I might be wrong, but'. Notes what a first-time visitor still can't easily figure out DESPITE what the site says. References what they claim, then notes the gap. Starts lowercase. No ending period. MUST NOT contain 'but' as a connector — the template already supplies it. No em-dashes.",
   "pointers": [
     "Pointer 1 — specific to this site, 20+ words, helpful tone. NEVER mention outdated content.",
     "Pointer 2 — specific to this site, 20+ words, helpful tone. NEVER mention outdated content.",
@@ -428,6 +428,8 @@ labs22.com
 14. Could you copy this observation to another company in the same industry and it still works? If yes, it's too generic — rewrite.
 15. Does the evidence support the route? If "what's confusing" is empty but you routed to strong — CHANGE THE ROUTE.
 16. Does specific_observation contain an em-dash ("—") used as a mid-sentence aside or qualifier clause? If yes, REWRITE as two shorter sentences. Example: replace "it's not clear who the site is speaking to — whether that's owners, managers, or contractors — and without that, it's hard to tell if it fits" with "it's not clear who the site is speaking to. Owners, managers, and contractors would each approach the site differently, and without knowing which one it's built for, it's hard to tell if it fits." Em-dashes as sentence breaks make observations harder to read.
+17. Does specific_observation contain the word "but" as a connector? If yes, REWRITE. The template already says "I might be wrong, but" so any additional "but" inside the observation produces a double-but sentence. Reword using "despite", "even though", comma splices, or by splitting into two clauses without a second "but".
+18. Does opening_line use a different company name than what was provided in the input? If yes, REWRITE to use the input company name. The subject line pulls from the input, so any mismatch between subject and body looks careless. If the site's product has its own brand name, reference it as "[Company]'s [Product]" rather than replacing the company name entirely.
 
 ---
 

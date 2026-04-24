@@ -289,6 +289,8 @@ For a consulting firm: "the depth here — 15 years, Fortune 500 clients, cross-
 - Must be specific enough that it could ONLY apply to THIS company
 - NEVER use generic lines about Instagram, phones, or how people discover brands. If you can say it about any company, don't say it.
 - NEVER mention outdated news, blog posts, or old content
+- Never use em-dashes ("—") — use periods or commas instead
+- CRITICAL: The observation must NOT contain the word "but" as its own connector. Since the template already prepends "I might be wrong, but", writing "but" inside produces "I might be wrong, but X, but Y" — broken output. Reword using "despite", "even though", or two clean clauses without a second "but".
 
 ---
 
@@ -378,8 +380,8 @@ Return ONLY valid JSON. No markdown. No backticks. No text before or after.
   "differentiator": "one sentence — their strongest differentiator that should be leading their brand",
   "visitorReaction": "2-3 sentences. What impressed you about the business AND where the brand could go further. First person.",
   "industry": "their industry in natural language, how you'd describe it to a friend",
-  "opening_line": "One complete sentence. What you found and what impressed you. Must mention something genuinely impressive about their business. Ends with a period.",
-  "brand_observation": "1-2 sentences. Starts lowercase. No ending period. Names their differentiator, then gently suggests it could be even more prominent in their brand. Warm tone. Specific to THIS company only.",
+  "opening_line": "One complete sentence. What you found and what impressed you. Must mention something genuinely impressive about their business. Ends with a period. Use input company name — not any different brand name found on the site. No em-dashes.",
+  "brand_observation": "1-2 sentences. Starts lowercase. No ending period. Names their differentiator, then gently suggests it could be even more prominent in their brand. Warm tone. Specific to THIS company only. MUST NOT contain 'but' as a connector — the template already supplies it. No em-dashes.",
   "pointers": [
     "Specific brand improvement, 20+ words, references their actual products/packaging/identity",
     "Specific brand improvement, 20+ words, references their actual products/packaging/identity",
@@ -397,8 +399,8 @@ Return ONLY valid JSON. No markdown. No backticks. No text before or after.
   "differentiator": "one sentence — their strongest differentiator",
   "visitorReaction": "2-3 sentences. What impressed you about the brand. First person.",
   "industry": "their industry in natural language",
-  "opening_line": "One complete sentence. What you found and what caught your eye about their brand. Ends with a period.",
-  "brand_compliment": "1-2 sentences. Names a specific brand decision and explains why it works. Starts lowercase. No ending period. Must be specific enough that it could ONLY apply to THIS company.",
+  "opening_line": "One complete sentence. What you found and what caught your eye about their brand. Ends with a period. Use input company name — not any different brand name found on the site. No em-dashes.",
+  "brand_compliment": "1-2 sentences. Names a specific brand decision and explains why it works. Starts lowercase. No ending period. Must be specific enough that it could ONLY apply to THIS company. No em-dashes.",
   "what_works": [
     "Specific brand decision that works well, 20+ words, references actual brand elements",
     "Specific brand decision that works well, 20+ words, references actual brand elements"
@@ -546,5 +548,7 @@ labs22.com
 14. Did you comment on visual identity, logo, color palette, photography, or packaging aesthetics without the text explicitly describing those elements? If yes, REMOVE — you cannot see visuals.
 15. Did you use "quality," "innovation," or "excellence" as the differentiator without specific evidence backing it? If yes, dig deeper or acknowledge the site lacks a clear differentiator.
 16. Does brand_observation contain an em-dash ("—") used as a mid-sentence aside or qualifier clause? If yes, REWRITE as two shorter sentences. Example: replace "the brand doesn't quite carry the story — whether through naming, messaging, or imagery — the way the product deserves" with "the brand doesn't quite carry the story the product deserves. The naming, messaging, and imagery could each do more of that work than they currently do." Em-dashes as sentence breaks make observations harder to read.
-17. THE PADDING TEST: Read your entire output. Are you rephrasing the same 1-2 facts across opening_line, brand_observation, and pointers because that's all the site gave you? If every field is a variation of the same thin claim, the site did not give you enough to work with. Change emailTier to "skip" with skipReason explaining insufficient content. A skipped lead with honest reasoning is better than a sent email that makes Labs22 look like it uses a bot.
+18. Does brand_observation contain the word "but" as a connector? If yes, REWRITE. The template already says "I might be wrong, but" so any additional "but" inside the observation produces a double-but sentence. Reword using "despite", "even though", comma splices, or two clauses without a second "but".
+19. Does opening_line use a different company name than what was provided in the input? If yes, REWRITE to use the input company name. The subject line pulls from the input, so any mismatch looks careless. If the site's product has its own brand name, reference it as "[Company]'s [Product]" rather than replacing the company name entirely.
+20. THE PADDING TEST: Read your entire output. Are you rephrasing the same 1-2 facts across opening_line, brand_observation, and pointers because that's all the site gave you? If every field is a variation of the same thin claim, the site did not give you enough to work with. Change emailTier to "skip" with skipReason explaining insufficient content. A skipped lead with honest reasoning is better than a sent email that makes Labs22 look like it uses a bot.
 `;
