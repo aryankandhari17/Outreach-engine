@@ -1032,11 +1032,12 @@ function renderTable() {
     } else if (hasQueued) {
       ctaHtml = `<button class="process-batch-inline-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; font-family:'SF Mono',monospace; opacity:${isProcessing?'0.5':'1'}; pointer-events:${isProcessing?'none':'auto'};">PROCESS BATCH</button>`;
     } else if (hasReady || isFullyExported) {
+      const reprocessBtnHtml = `<button class="reprocess-batch-inline-btn outline-btn" style="padding:6px 14px; font-size:11px; height:32px; font-family:'SF Mono',monospace; margin-right:8px; opacity:${isProcessing?'0.4':'1'}; pointer-events:${isProcessing?'none':'auto'};">REPROCESS</button>`;
       if (currentMode === 'uiux' && activeTiers.length > 0) {
         const n = activeTiers.length;
-        ctaHtml = `<button class="export-all-groups-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT ALL ${n} GROUP${n === 1 ? '' : 'S'}</button>`;
+        ctaHtml = `${reprocessBtnHtml}<button class="export-all-groups-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT ALL ${n} GROUP${n === 1 ? '' : 'S'}</button>`;
       } else {
-        ctaHtml = `<button class="export-batch-inline-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT BATCH</button>`;
+        ctaHtml = `${reprocessBtnHtml}<button class="export-batch-inline-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT BATCH</button>`;
       }
     }
 
@@ -1089,6 +1090,33 @@ function renderTable() {
               await wait(BATCH_LEAD_DELAY_MS);
             }
           }
+        }
+      }
+      if (currentProcessingBatch === batchKey) {
+        isProcessing = false; cancelProcessing = false; currentProcessingBatch = null;
+        renderTable();
+      }
+    };
+
+    const reprocessBatchBtn = header.querySelector('.reprocess-batch-inline-btn');
+    if (reprocessBatchBtn) reprocessBatchBtn.onclick = async (e) => {
+      e.stopPropagation();
+      if (isProcessing) return;
+      if (!confirm(`Reprocess all ${list.length} leads in ${batchKey}? This will clear their current emails and re-run the AI.`)) return;
+      list.forEach(l => { l.status = 'Queued'; l.analysis = null; l.sequence = null; });
+      saveAllState();
+      currentProcessingBatch = batchKey;
+      isProcessing = true; cancelProcessing = false;
+      renderTable();
+      for (let i = 0; i < list.length; i++) {
+        const l = list[i];
+        if (cancelProcessing) break;
+        l.status = 'Processing'; renderTable();
+        await processLead(l);
+        saveAllState();
+        if (!cancelProcessing && currentProcessingBatch === batchKey) {
+          const hasMorePending = list.slice(i + 1).some(n => n.status === 'Queued' || n.status === 'Error');
+          if (hasMorePending) await wait(BATCH_LEAD_DELAY_MS);
         }
       }
       if (currentProcessingBatch === batchKey) {
@@ -1382,7 +1410,7 @@ function generateSequences(lead) {
         e2s: `Re: ${company}'s brand`,
         e2b: `Hi ${firstName},\n\nFollowing up on my note — here are a few things I noticed:\n\n${pointers}\n\nThese are the kinds of refinements that can shift how customers experience a brand — not a full redesign, but targeted changes that help the brand tell more of the story the product already delivers.\n\n${sig}`,
         e3s: `Re: quick thoughts`,
-        e3b: `Hi ${firstName},\n\nJust nudging this in case it got buried.\n\nWe specialise in brand identity and packaging design — helping companies make the most of what already makes them great.\n\nIf this is ever relevant, happy to exchange notes.\n\n${s.name}`
+        e3b: `Hi ${firstName},\n\nJust nudging this in case it got buried.\n\nWe specialise in brand identity and packaging design — helping companies make the most of what already makes them great.\n\nIf this is ever relevant, happy to exchange notes.\n\n${sig}`
       };
     } else {
       return {
@@ -1406,7 +1434,7 @@ function generateSequences(lead) {
         e2s: `Re: ${company}'s website`,
         e2b: `Hi ${firstName},\n\nFollowing up on my note — here are a few things I noticed:\n\n${pointers}\n\nThese are the kinds of small changes that tend to shift how visitors perceive a business — not a redesign, but targeted refinements that make the difference between someone browsing and someone reaching out.\n\n${sig}`,
         e3s: `Re: quick thoughts`,
-        e3b: `Hi ${firstName},\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — making sure websites convert visitors into customers as effectively as the business deserves.\n\nIf this is ever relevant, happy to exchange notes.\n\n${s.name}`
+        e3b: `Hi ${firstName},\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — making sure websites convert visitors into customers as effectively as the business deserves.\n\nIf this is ever relevant, happy to exchange notes.\n\n${sig}`
       };
     } else {
       return {
@@ -1415,7 +1443,7 @@ function generateSequences(lead) {
         e2s: `Re: ${company}'s site`,
         e2b: `Hi ${firstName},\n\nFollowing up on my note — a couple of ideas that might be worth exploring:\n\n${pointers}\n\nThese aren't big overhauls — more the kind of refinements that tend to shift how visitors engage with a site that already has a solid foundation.\n\n${sig}`,
         e3s: `Re: quick thoughts`,
-        e3b: `Hi ${firstName},\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — helping companies with strong foundations get even more out of their websites.\n\nOut of curiosity, is improving the website experience part of your roadmap this year?\n\n${s.name}`
+        e3b: `Hi ${firstName},\n\nJust nudging this in case it got buried.\n\nWe specialise in UX and digital experience design — helping companies with strong foundations get even more out of their websites.\n\nOut of curiosity, is improving the website experience part of your roadmap this year?\n\n${sig}`
       };
     }
   }
@@ -1516,6 +1544,12 @@ async function processLead(lead) {
     if (!parsed) throw new Error('Model returned invalid JSON after one repair pass.');
 
     lead.analysis = parsed;
+    // Strip em-dashes from AI-generated text fields — guaranteed regardless of prompt compliance
+    const stripEmDash = str => (typeof str === 'string') ? str.replace(/ — /g, ', ').replace(/—/g, ',') : str;
+    const emDashFields = ['specific_observation', 'brand_observation', 'opening_line', 'design_compliment', 'brand_compliment'];
+    emDashFields.forEach(f => { if (lead.analysis[f]) lead.analysis[f] = stripEmDash(lead.analysis[f]); });
+    if (Array.isArray(lead.analysis.pointers)) lead.analysis.pointers = lead.analysis.pointers.map(stripEmDash);
+    if (Array.isArray(lead.analysis.what_works)) lead.analysis.what_works = lead.analysis.what_works.map(stripEmDash);
     if (lead.analysis.industry) lead.industry = lead.analysis.industry;
     if (lead.analysis.siteLoaded === true && !lead.analysis.emailTier) {
       lead.analysis.emailTier = 'soft';
