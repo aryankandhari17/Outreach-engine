@@ -77,7 +77,7 @@ try { const s = localStorage.getItem('batchEnocSettings'); if (s) batchEnocSetti
 const TIER_ORDER = ['strong', 'soft', 'compliment'];
 const TIER_LABELS = { strong: 'Strong Critique', soft: 'Soft Observation', compliment: 'Compliment' };
 const TIER_COLORS = { strong: '#EF4444', soft: '#F59E0B', compliment: '#10B981' };
-const BATCH_LEAD_DELAY_MS = 45000;
+const BATCH_LEAD_DELAY_MS = 15000;
 const AI_MAX_CONTENT_CHARS = 3200;
 const AI_MAX_429_RETRIES = 3;
 const AI_429_BASE_DELAY_MS = 15000;
@@ -166,19 +166,23 @@ function syncCampaignRegistryWithLeads() {
     }
   });
 
-  leads.forEach(l => {
-    const campaignName = normalizeCampaignName(l.campaign || 'Manual');
-    if (!campaignName) return;
-    if (!byName.has(campaignName)) {
-      byName.set(campaignName, { name: campaignName, createdAt: l.dateAdded || nowIso });
-      changed = true;
-      return;
-    }
-    if (l.dateAdded && l.dateAdded < byName.get(campaignName).createdAt) {
-      byName.get(campaignName).createdAt = l.dateAdded;
-      changed = true;
-    }
-  });
+  const collectFromLeads = (list, defaultCampaign) => {
+    list.forEach(l => {
+      const campaignName = normalizeCampaignName(l.campaign || defaultCampaign);
+      if (!campaignName) return;
+      if (!byName.has(campaignName)) {
+        byName.set(campaignName, { name: campaignName, createdAt: l.dateAdded || nowIso });
+        changed = true;
+        return;
+      }
+      if (l.dateAdded && l.dateAdded < byName.get(campaignName).createdAt) {
+        byName.get(campaignName).createdAt = l.dateAdded;
+        changed = true;
+      }
+    });
+  };
+  collectFromLeads(leads, 'Manual');
+  collectFromLeads(personalLeads, 'Personal');
 
   const activeName = normalizeCampaignName(activeCampaign) || 'Manual';
   if (!byName.has(activeName)) {
@@ -264,6 +268,11 @@ function loadPersonalLeads() {
     const saved = localStorage.getItem('personalLeads');
     if (saved) personalLeads = JSON.parse(saved);
   } catch(e) { personalLeads = []; }
+  let migrated = false;
+  personalLeads.forEach(l => {
+    if (!l.campaign) { l.campaign = 'Personal'; migrated = true; }
+  });
+  if (migrated) savePersonalLeads();
 }
 
 function applySidebarState() {
@@ -360,18 +369,22 @@ function renderSidebar() {
   campaignRegistry.forEach(c => {
     campaignMap[c.name] = { date: c.createdAt || new Date().toISOString(), count: 0, done: 0 };
   });
-  leads.forEach(l => {
-    const c = l.campaign || 'Manual';
-    if (!campaignMap[c]) {
-      campaignMap[c] = { date: l.dateAdded || new Date().toISOString(), count: 0, done: 0 };
-    } else if (l.dateAdded && l.dateAdded < campaignMap[c].date) {
-      campaignMap[c].date = l.dateAdded;
-    }
-    campaignMap[c].count++;
-    if (!['Queued', 'Processing'].includes(l.status)) {
-      campaignMap[c].done++;
-    }
-  });
+  const tallyLeads = (list, defaultCampaign) => {
+    list.forEach(l => {
+      const c = l.campaign || defaultCampaign;
+      if (!campaignMap[c]) {
+        campaignMap[c] = { date: l.dateAdded || new Date().toISOString(), count: 0, done: 0 };
+      } else if (l.dateAdded && l.dateAdded < campaignMap[c].date) {
+        campaignMap[c].date = l.dateAdded;
+      }
+      campaignMap[c].count++;
+      if (!['Queued', 'Processing', 'Draft'].includes(l.status)) {
+        campaignMap[c].done++;
+      }
+    });
+  };
+  tallyLeads(leads, 'Manual');
+  tallyLeads(personalLeads, 'Personal');
 
   // Ensure activeCampaign always appears
   if (!campaignMap[activeCampaign]) {
@@ -474,9 +487,11 @@ function renderSidebar() {
         }
         if (newName !== c) {
           leads.forEach(l => { if (l.campaign === c) l.campaign = newName; });
+          personalLeads.forEach(l => { if ((l.campaign || 'Personal') === c) l.campaign = newName; });
           renameCampaignInRegistry(c, newName);
           if (activeCampaign === c) { activeCampaign = newName; localStorage.setItem('activeCampaign', newName); }
           saveAllState();
+          savePersonalLeads();
         }
         renderSidebar();
       };
@@ -493,6 +508,7 @@ function renderSidebar() {
     el.querySelector('.delete-yes-btn').onclick = (e) => {
       e.stopPropagation();
       leads = leads.filter(l => l.campaign !== c);
+      personalLeads = personalLeads.filter(l => (l.campaign || 'Personal') !== c);
       removeCampaignFromRegistry(c);
       if (activeCampaign === c) {
         const remaining = campaignRegistry.map(item => item.name).filter(Boolean);
@@ -503,7 +519,7 @@ function renderSidebar() {
         activeCampaign = remaining[0] || 'Manual';
         localStorage.setItem('activeCampaign', activeCampaign);
       }
-      saveAllState(); renderSidebar(); reassignBatches(); renderTable();
+      saveAllState(); savePersonalLeads(); renderSidebar(); reassignBatches(); renderTable(); renderPersonalTable();
     };
 
     el.querySelector('.delete-no-btn').onclick = (e) => {
@@ -515,7 +531,7 @@ function renderSidebar() {
       if (e.target.closest('.campaign-menu-btn') || e.target.closest('.campaign-menu-dropdown') || e.target.closest('.delete-confirm')) return;
       activeCampaign = c;
       localStorage.setItem('activeCampaign', c);
-      renderSidebar(); reassignBatches(); renderTable();
+      renderSidebar(); reassignBatches(); renderTable(); renderPersonalTable();
     };
     container.appendChild(el);
   });
@@ -1950,13 +1966,14 @@ function renderPersonalTable() {
   const search = (document.getElementById('personalSearchInput').value || '').toLowerCase();
   const statusFilter = document.getElementById('personalStatusFilter').value;
 
-  const displayed = personalLeads.filter(l => {
+  const inCampaign = personalLeads.filter(l => (l.campaign || 'Personal') === activeCampaign);
+  const displayed = inCampaign.filter(l => {
     if (statusFilter !== 'All' && l.status !== statusFilter) return false;
     if (search && !`${l.company} ${l.contactName} ${l.relationship}`.toLowerCase().includes(search)) return false;
     return true;
   });
 
-  countEl.innerText = `${personalLeads.length} LEADS`;
+  countEl.innerText = `${inCampaign.length} LEADS`;
   tbody.innerHTML = '';
 
   displayed.forEach(l => {
@@ -2303,6 +2320,8 @@ function processPersonalCSVContent(content, fileName) {
       emails.forEach((email, emailIndex) => {
         const exists = personalLeads.some(l => normalizeEmail(l.contactEmail) === normalizeEmail(email));
         if (exists) { dupeCount++; return; }
+        const campaignName = normalizeCampaignName(activeCampaign) || 'Personal';
+        ensureCampaignExists(campaignName);
         personalLeads.push({
           id: `${Date.now()}-${rowIndex}-${emailIndex}`,
           company,
@@ -2313,6 +2332,7 @@ function processPersonalCSVContent(content, fileName) {
           status: 'Draft',
           emails: [{ subject: '', body: '' }],
           websiteContext: '',
+          campaign: campaignName,
           dateAdded: new Date().toISOString()
         });
         addedCount++;
@@ -2390,6 +2410,8 @@ document.getElementById('savePersonalLeadBtn').onclick = () => {
     alert('Please fill in all required fields (Company, Contact Name, Contact Email, Relationship Context).');
     return;
   }
+  const campaignName = normalizeCampaignName(activeCampaign) || 'Personal';
+  ensureCampaignExists(campaignName);
   personalLeads.push({
     id: Date.now().toString(),
     company,
@@ -2400,11 +2422,13 @@ document.getElementById('savePersonalLeadBtn').onclick = () => {
     status: 'Draft',
     emails: [{ subject: '', body: '' }],
     websiteContext: '',
+    campaign: campaignName,
     dateAdded: new Date().toISOString()
   });
   savePersonalLeads();
   document.getElementById('addPersonalLeadModal').classList.remove('active');
   renderPersonalTable();
+  renderSidebar();
 };
 
 document.getElementById('leadWebsiteLink').onclick = () => {

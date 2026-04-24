@@ -1,7 +1,7 @@
 {
   "name": "labs22-outreach-engine",
   "productName": "OutreachEngine",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Native Electron App for Labs22 Cold Outreach Automation",
   "main": "main.js",
   "scripts": {
