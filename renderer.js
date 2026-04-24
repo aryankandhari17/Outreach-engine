@@ -284,6 +284,44 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCampaignRegistry();
   applySidebarState();
 
+  // Column resize — drag the right edge of any th.resizable-col
+  const COL_WIDTHS_KEY = 'leadsTableColWidths';
+  const savedWidths = (() => { try { return JSON.parse(localStorage.getItem(COL_WIDTHS_KEY) || '{}'); } catch(e) { return {}; } })();
+  const applyColWidths = () => {
+    document.querySelectorAll('#leadsTable th.resizable-col').forEach(th => {
+      const col = th.dataset.col;
+      if (savedWidths[col]) th.style.width = savedWidths[col] + 'px';
+    });
+  };
+  applyColWidths();
+
+  document.querySelectorAll('#leadsTable th.resizable-col').forEach(th => {
+    let startX, startW;
+    const onMouseMove = (e) => {
+      const newW = Math.max(60, startW + (e.clientX - startX));
+      th.style.width = newW + 'px';
+    };
+    const onMouseUp = (e) => {
+      const col = th.dataset.col;
+      savedWidths[col] = Math.max(60, startW + (e.clientX - startX));
+      localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(savedWidths));
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    th.addEventListener('mousedown', (e) => {
+      const rect = th.getBoundingClientRect();
+      if (e.clientX < rect.right - 6) return; // only trigger on right 6px
+      startX = e.clientX;
+      startW = th.offsetWidth;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  });
+
   const toggleBtn = document.getElementById('sidebarToggleBtn');
   if (toggleBtn) {
     toggleBtn.onclick = () => {
@@ -1032,7 +1070,7 @@ function renderTable() {
     } else if (hasQueued) {
       ctaHtml = `<button class="process-batch-inline-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; font-family:'SF Mono',monospace; opacity:${isProcessing?'0.5':'1'}; pointer-events:${isProcessing?'none':'auto'};">PROCESS BATCH</button>`;
     } else if (hasReady || isFullyExported) {
-      const reprocessBtnHtml = `<button class="reprocess-batch-inline-btn outline-btn" style="padding:6px 14px; font-size:11px; height:32px; font-family:'SF Mono',monospace; margin-right:8px; opacity:${isProcessing?'0.4':'1'}; pointer-events:${isProcessing?'none':'auto'};">REPROCESS</button>`;
+      const reprocessBtnHtml = `<button class="reprocess-batch-inline-btn outline-btn" style="padding:6px 14px; font-size:11px; height:32px; font-family:'SF Mono',monospace; margin-right:20px; opacity:${isProcessing?'0.4':'1'}; pointer-events:${isProcessing?'none':'auto'};">REPROCESS</button>`;
       if (currentMode === 'uiux' && activeTiers.length > 0) {
         const n = activeTiers.length;
         ctaHtml = `${reprocessBtnHtml}<button class="export-all-groups-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT ALL ${n} GROUP${n === 1 ? '' : 'S'}</button>`;

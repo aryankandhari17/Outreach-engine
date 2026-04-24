@@ -308,6 +308,10 @@ table {
   table-layout: auto;
 }
 
+#leadsTable {
+  table-layout: fixed;
+}
+
 th, td {
   padding: 12px 16px;
   text-align: left;
@@ -335,6 +339,27 @@ th {
 
 ::-webkit-resizer {
   display: none;
+}
+
+th.resizable-col {
+  position: relative;
+  overflow: hidden;
+}
+
+th.resizable-col::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 20%;
+  height: 60%;
+  width: 3px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 2px;
+  cursor: col-resize;
+}
+
+th.resizable-col:hover::after {
+  background: var(--accent);
 }
 
 tr:hover {
