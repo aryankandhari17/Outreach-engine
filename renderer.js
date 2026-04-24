@@ -75,6 +75,74 @@ try { const s = localStorage.getItem('batchEnocSettings'); if (s) batchEnocSetti
 const TIER_ORDER = ['strong', 'soft', 'compliment'];
 const TIER_LABELS = { strong: 'Strong Critique', soft: 'Soft Observation', compliment: 'Compliment' };
 const TIER_COLORS = { strong: '#EF4444', soft: '#F59E0B', compliment: '#10B981' };
+const BATCH_LEAD_DELAY_MS = 20000;
+const AI_MAX_CONTENT_CHARS = 3200;
+const AI_MAX_429_RETRIES = 3;
+const AI_429_BASE_DELAY_MS = 15000;
+const AI_REPAIR_MAX_TOKENS = 1200;
+
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+function trimAiContent(text, maxChars = AI_MAX_CONTENT_CHARS) {
+  const value = String(text || '');
+  if (value.length <= maxChars) return value;
+  const truncated = value.slice(0, maxChars);
+  return `${truncated}\n\n[CONTENT TRUNCATED TO ${maxChars} CHARACTERS FOR RATE-LIMIT SAFETY]`;
+}
+
+function parseModelJson(rawText) {
+  if (!rawText) return null;
+  let clean = String(rawText).trim();
+  clean = clean.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+  const firstBrace = clean.indexOf('{');
+  const lastBrace = clean.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    clean = clean.substring(firstBrace, lastBrace + 1);
+  }
+  try { return JSON.parse(clean); } catch (e) { return null; }
+}
+
+function isRateLimitResponse(response) {
+  if (!response) return false;
+  if (response.status === 429) return true;
+  const payload = `${JSON.stringify(response.data || '')} ${String(response.error || '')}`;
+  return /rate[_\s-]?limit/i.test(payload);
+}
+
+function buildAiCallError(response) {
+  if (!response) return 'API error: empty response';
+  if (response.status) return `API error ${response.status}: ${JSON.stringify(response.data)}`;
+  if (response.error) return `API error: ${response.error}`;
+  return `API error: ${JSON.stringify(response)}`;
+}
+
+async function callClaudeWithBackoff({ model, apiKey, sysPrompt, userContent, maxTokens, temperature, leadLabel }) {
+  for (let attempt = 0; attempt <= AI_MAX_429_RETRIES; attempt++) {
+    if (cancelProcessing) return { ok: false, error: 'Processing cancelled by user' };
+    const response = await window.electronAPI.aiCall({
+      url: 'https://api.anthropic.com/v1/messages',
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: {
+        model,
+        max_tokens: maxTokens,
+        temperature,
+        system: sysPrompt,
+        messages: [{ role: 'user', content: userContent }]
+      }
+    });
+
+    if (response?.ok) return response;
+    if (attempt < AI_MAX_429_RETRIES && isRateLimitResponse(response)) {
+      const delayMs = AI_429_BASE_DELAY_MS * (attempt + 1);
+      console.warn(`[OutreachEngine] Rate-limited for ${leadLabel || 'lead'}. Retrying in ${Math.round(delayMs / 1000)}s (${attempt + 1}/${AI_MAX_429_RETRIES}).`);
+      await wait(delayMs);
+      continue;
+    }
+    return response;
+  }
+  return { ok: false, error: 'Rate limit retries exhausted' };
+}
 
 // Personal tab state — isolated from all other lead data
 let personalLeads = [];
@@ -796,6 +864,9 @@ function renderTable() {
           renderTable();
           await processLead(l);
           saveAllState();
+          if (!cancelProcessing && currentProcessingBatch === batchKey) {
+            await wait(BATCH_LEAD_DELAY_MS);
+          }
         }
       }
       if (currentProcessingBatch === batchKey) {
@@ -990,19 +1061,58 @@ function renderEmails(lead) {
     if (!lead.sequence[`e${i}s`]) return;
     const card = document.createElement('div');
     card.className = 'email-card';
-    const body = lead.sequence[`e${i}b`].replace(/\n/g,'<br>');
-    card.innerHTML = `<div class="email-header"><b>EMAIL ${i}</b> <button class="copy-btn outline-btn">Copy</button></div><div class="email-body"><b>S: ${lead.sequence[`e${i}s`]}</b><br><br>${body}</div>`;
-    card.querySelector('.copy-btn').onclick = (e) => { 
-      navigator.clipboard.writeText(lead.sequence[`e${i}b`]);
-      const btn = e.currentTarget;
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<span><svg style="width:14px;height:14px;vertical-align:middle;margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Copied!</span>';
-      btn.classList.add('copied');
-      setTimeout(() => {
-        btn.innerHTML = originalText;
-        btn.classList.remove('copied');
-      }, 2000);
+
+    const renderViewMode = () => {
+      const body = lead.sequence[`e${i}b`].replace(/\n/g, '<br>');
+      card.innerHTML = `
+        <div class="email-header">
+          <b>EMAIL ${i}</b>
+          <div style="display:flex;gap:8px;">
+            <button class="edit-btn outline-btn">Edit</button>
+            <button class="copy-btn outline-btn">Copy</button>
+          </div>
+        </div>
+        <div class="email-body"><b>S: ${lead.sequence[`e${i}s`]}</b><br><br>${body}</div>
+      `;
+      card.querySelector('.copy-btn').onclick = (e) => {
+        navigator.clipboard.writeText(lead.sequence[`e${i}b`]);
+        const btn = e.currentTarget;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span><svg style="width:14px;height:14px;vertical-align:middle;margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Copied!</span>';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.innerHTML = originalText; btn.classList.remove('copied'); }, 2000);
+      };
+      card.querySelector('.edit-btn').onclick = () => renderEditMode();
     };
+
+    const renderEditMode = () => {
+      const escapedSubject = lead.sequence[`e${i}s`].replace(/"/g, '&quot;');
+      const escapedBody = lead.sequence[`e${i}b`];
+      card.innerHTML = `
+        <div class="email-header">
+          <b>EMAIL ${i}</b>
+          <div style="display:flex;gap:8px;">
+            <button class="cancel-edit-btn outline-btn">Cancel</button>
+            <button class="save-edit-btn">Save</button>
+          </div>
+        </div>
+        <div class="email-edit-body">
+          <input class="email-subject-input" type="text" value="${escapedSubject}" placeholder="Subject" />
+          <textarea class="email-body-textarea">${escapedBody}</textarea>
+        </div>
+      `;
+      card.querySelector('.cancel-edit-btn').onclick = () => renderViewMode();
+      card.querySelector('.save-edit-btn').onclick = () => {
+        const newSubject = card.querySelector('.email-subject-input').value.trim();
+        const newBody = card.querySelector('.email-body-textarea').value;
+        if (newSubject) lead.sequence[`e${i}s`] = newSubject;
+        lead.sequence[`e${i}b`] = newBody;
+        saveAllState();
+        renderViewMode();
+      };
+    };
+
+    renderViewMode();
     container.appendChild(card);
   });
 }
@@ -1139,33 +1249,57 @@ async function processLead(lead) {
         `This is a technical scraper limitation, NOT evidence of a thin or empty site. ` +
         `RULE: You are FORBIDDEN from returning emailTier "skip" for this lead. ` +
         `RULE: You are FORBIDDEN from applying STEP 1.5 (thin site check). ` +
-        `RULE: If the scraped text is too sparse for full analysis, use the company name and domain below to form your best judgment and assign emailTier "3" (soft reach). ` +
+        `RULE: If the scraped text is too sparse for full analysis, use the company name and domain below to form your best judgment and assign emailTier "soft". ` +
         `Only return siteLoaded: false if the content explicitly says "domain not found", "404", or "coming soon".]\n\n` +
         (leadContext ? `[KNOWN LEAD DATA]\n${leadContext}\n\n` : '') +
         contentForAI;
     }
 
-    const response = await window.electronAPI.aiCall({
-      url: 'https://api.anthropic.com/v1/messages',
-      method: 'POST',
-      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: { model, max_tokens: 4096, temperature: 0.2, system: sysPrompt, messages: [{ role: 'user', content: `Analyze this website and return ONLY valid JSON:\n\n${contentForAI}` }] }
+    const originalContentLength = contentForAI.length;
+    contentForAI = trimAiContent(contentForAI);
+    if (contentForAI.length < originalContentLength) {
+      console.log(`[OutreachEngine] Trimmed AI payload for ${lead.company} from ${originalContentLength} to ${contentForAI.length} chars.`);
+    }
+
+    const response = await callClaudeWithBackoff({
+      model,
+      apiKey,
+      sysPrompt,
+      userContent: `Analyze this website and return ONLY valid JSON:\n\n${contentForAI}`,
+      maxTokens: 4096,
+      temperature: 0.2,
+      leadLabel: lead.company
     });
 
     if (lead.status !== 'Processing') return;
-    if (!response || !response.ok) throw new Error(`API error ${response?.status}: ${JSON.stringify(response?.data)}`);
+    if (!response || !response.ok) throw new Error(buildAiCallError(response));
 
-    const result = response.data.content[0].text;
-
-    let cleanResult = result.trim();
-    const firstBrace = cleanResult.indexOf('{');
-    const lastBrace = cleanResult.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace !== -1) {
-      cleanResult = cleanResult.substring(firstBrace, lastBrace + 1);
+    let rawResult = response?.data?.content?.[0]?.text || '';
+    let parsed = parseModelJson(rawResult);
+    if (!parsed) {
+      console.warn(`[OutreachEngine] Non-JSON model output for ${lead.company}. Attempting repair pass.`);
+      const repairResponse = await callClaudeWithBackoff({
+        model,
+        apiKey,
+        sysPrompt,
+        userContent: `Your previous reply was not valid JSON.\nReturn ONLY valid JSON using the exact required field names.\nDo not add markdown, commentary, or code fences.\n\nPrevious reply:\n${String(rawResult).slice(0, 5000)}`,
+        maxTokens: AI_REPAIR_MAX_TOKENS,
+        temperature: 0,
+        leadLabel: `${lead.company} (repair)`
+      });
+      if (!repairResponse || !repairResponse.ok) throw new Error(buildAiCallError(repairResponse));
+      rawResult = repairResponse?.data?.content?.[0]?.text || '';
+      parsed = parseModelJson(rawResult);
     }
-    lead.analysis = JSON.parse(cleanResult);
+    if (!parsed) throw new Error('Model returned invalid JSON after one repair pass.');
+
+    lead.analysis = parsed;
     if (lead.analysis.industry) lead.industry = lead.analysis.industry;
-    console.log('[OutreachEngine] AI response for', lead.company, '→ emailTier:', lead.analysis.emailTier, '| siteLoaded:', lead.analysis.siteLoaded, '| full:', cleanResult.slice(0, 300));
+    if (lead.analysis.siteLoaded === true && !lead.analysis.emailTier) {
+      lead.analysis.emailTier = 'soft';
+    }
+    const analysisPreview = JSON.stringify(lead.analysis).slice(0, 300);
+    console.log('[OutreachEngine] AI response for', lead.company, '→ emailTier:', lead.analysis.emailTier, '| siteLoaded:', lead.analysis.siteLoaded, '| full:', analysisPreview);
 
     if (!lead.analysis.siteLoaded || lead.analysis.emailTier === 'skip') {
       lead.status = 'Skipped';
@@ -1174,9 +1308,15 @@ async function processLead(lead) {
       lead.status = 'Ready';
     }
   } catch(e) {
-    lead.status = 'Error';
-    lead.errorMsg = e?.message || JSON.stringify(e) || 'Unknown error';
-    console.error('processLead failed:', lead.errorMsg, e);
+    const msg = e?.message || JSON.stringify(e) || 'Unknown error';
+    if (cancelProcessing && /cancelled/i.test(msg)) {
+      lead.status = 'Queued';
+      lead.errorMsg = '';
+    } else {
+      lead.status = 'Error';
+      lead.errorMsg = msg;
+      console.error('processLead failed:', lead.errorMsg, e);
+    }
   }
   renderTable();
   await window.electronAPI.saveState(leads);
@@ -1976,6 +2116,97 @@ document.getElementById('saveEditPersonalLeadBtn').onclick = () => {
 document.getElementById('personalSearchInput').addEventListener('input', renderPersonalTable);
 document.getElementById('personalStatusFilter').addEventListener('change', renderPersonalTable);
 
+function setPersonalAddLeadTab(tab) {
+  const isBulk = tab === 'bulk';
+  const bulkTab = document.getElementById('tabAddPersonalBulk');
+  const singleTab = document.getElementById('tabAddPersonalSingle');
+  const bulkPanel = document.getElementById('personalModalBatchPanel');
+  const singlePanel = document.getElementById('personalModalSinglePanel');
+
+  bulkTab.classList.toggle('active', isBulk);
+  singleTab.classList.toggle('active', !isBulk);
+  bulkTab.style.color = isBulk ? 'var(--accent)' : 'var(--text-40)';
+  bulkTab.style.borderBottom = isBulk ? '2px solid var(--accent)' : 'none';
+  singleTab.style.color = isBulk ? 'var(--text-40)' : 'var(--accent)';
+  singleTab.style.borderBottom = isBulk ? 'none' : '2px solid var(--accent)';
+  bulkPanel.style.display = isBulk ? 'flex' : 'none';
+  singlePanel.style.display = isBulk ? 'none' : 'block';
+}
+
+function processPersonalCSVContent(content, fileName) {
+  const normalizeEmail = (e) => (e || '').trim().toLowerCase();
+  const deriveCompany = (website, email) => {
+    const fromWebsite = (website || '').replace(/^https?:\/\/(www\.)?/i, '').split('/')[0];
+    if (fromWebsite) return fromWebsite;
+    const fromEmail = (email || '').split('@')[1] || '';
+    return fromEmail;
+  };
+
+  Papa.parse(content, { header: true, skipEmptyLines: true, complete: (r) => {
+    let addedCount = 0;
+    let dupeCount = 0;
+    let skippedCount = 0;
+
+    r.data.forEach((row, rowIndex) => {
+      const R = {};
+      Object.keys(row).forEach(k => { R[k.toLowerCase().trim()] = (row[k] || '').trim(); });
+      const pick = (...keys) => {
+        for (const key of keys) {
+          const val = R[key.toLowerCase()];
+          if (val) return val;
+        }
+        return '';
+      };
+
+      const emailField = pick('email', 'primary_contact_email', 'founder_email', 'contact_email', 'email address', 'e-mail', 'work_email', 'person_email');
+      const emails = emailField.split(/[;,]/).map(e => e.trim()).filter(e => e && e.includes('@'));
+      if (emails.length === 0) { skippedCount++; return; }
+
+      const website = pick('website_url', 'website', 'url', 'website url', 'domain', 'company_domain', 'company_website', 'web');
+      const firstName = pick('first_name', 'first name');
+      const lastName = pick('last_name', 'last name', 'lastname');
+      const combinedName = `${firstName} ${lastName}`.trim();
+      const contactName = pick('primary_contact_name', 'founder_name', 'contact_name', 'full_name', 'name') || combinedName || 'Unknown';
+      const companyRaw = pick('company_name', 'company', 'company name', 'organization', 'account name', 'account_name', 'org_name') || deriveCompany(website, emails[0]);
+      const company = companyRaw.replace(/^www\./i, '').trim() || 'Unknown Company';
+      const relationship = pick('relationship_context', 'relationship', 'context', 'notes', 'note') || `Imported from ${fileName}`;
+
+      emails.forEach((email, emailIndex) => {
+        const exists = personalLeads.some(l => normalizeEmail(l.contactEmail) === normalizeEmail(email));
+        if (exists) { dupeCount++; return; }
+        personalLeads.push({
+          id: `${Date.now()}-${rowIndex}-${emailIndex}`,
+          company,
+          contactName,
+          contactEmail: email,
+          website,
+          relationship,
+          status: 'Draft',
+          emails: [{ subject: '', body: '' }],
+          websiteContext: '',
+          dateAdded: new Date().toISOString()
+        });
+        addedCount++;
+      });
+    });
+
+    if (addedCount > 0) {
+      savePersonalLeads();
+      renderPersonalTable();
+      document.getElementById('addPersonalLeadModal').classList.remove('active');
+      alert(`Imported ${addedCount} personal lead${addedCount === 1 ? '' : 's'}${dupeCount ? `\nSkipped duplicates: ${dupeCount}` : ''}${skippedCount ? `\nSkipped rows with no valid email: ${skippedCount}` : ''}`);
+      return;
+    }
+
+    if (dupeCount > 0 || skippedCount > 0) {
+      alert(`No new personal leads were imported.${dupeCount ? `\nDuplicates: ${dupeCount}` : ''}${skippedCount ? `\nRows with no valid email: ${skippedCount}` : ''}`);
+      return;
+    }
+
+    alert('No valid leads found. Make sure your CSV has an email column.');
+  }});
+}
+
 // Add New Personal Lead button
 document.getElementById('addPersonalLeadBtn').onclick = () => {
   document.getElementById('plCompany').value = '';
@@ -1983,11 +2214,44 @@ document.getElementById('addPersonalLeadBtn').onclick = () => {
   document.getElementById('plContactEmail').value = '';
   document.getElementById('plWebsite').value = '';
   document.getElementById('plRelationship').value = '';
+  setPersonalAddLeadTab('bulk');
   document.getElementById('addPersonalLeadModal').classList.add('active');
 };
 document.getElementById('closeAddPersonalLeadModalBtn').onclick = () => {
   document.getElementById('addPersonalLeadModal').classList.remove('active');
 };
+document.getElementById('tabAddPersonalBulk').onclick = () => setPersonalAddLeadTab('bulk');
+document.getElementById('tabAddPersonalSingle').onclick = () => setPersonalAddLeadTab('single');
+
+document.getElementById('personalDropZone').onclick = async () => {
+  const result = await window.electronAPI.openCSV();
+  if (result) processPersonalCSVContent(result.content, result.fileName);
+};
+const personalDropZone = document.getElementById('personalDropZone');
+personalDropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  personalDropZone.style.borderColor = 'var(--accent)';
+  personalDropZone.style.background = 'rgba(255,94,0,0.06)';
+});
+personalDropZone.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  personalDropZone.style.borderColor = '';
+  personalDropZone.style.background = '';
+});
+personalDropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  personalDropZone.style.borderColor = '';
+  personalDropZone.style.background = '';
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.csv')) { alert('Please drop a CSV file.'); return; }
+  const reader = new FileReader();
+  reader.onload = (evt) => processPersonalCSVContent(evt.target.result, file.name);
+  reader.readAsText(file);
+});
+
 document.getElementById('savePersonalLeadBtn').onclick = () => {
   const company = document.getElementById('plCompany').value.trim();
   const contactName = document.getElementById('plContactName').value.trim();
@@ -2005,8 +2269,7 @@ document.getElementById('savePersonalLeadBtn').onclick = () => {
     website: document.getElementById('plWebsite').value.trim(),
     relationship,
     status: 'Draft',
-    emailSubject: '',
-    emailBody: '',
+    emails: [{ subject: '', body: '' }],
     websiteContext: '',
     dateAdded: new Date().toISOString()
   });

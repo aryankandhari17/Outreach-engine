@@ -475,30 +475,44 @@
       <h2 style="font-size:14px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); margin:0;">New Personal Lead</h2>
       <div id="closeAddPersonalLeadModalBtn" style="font-size:20px; color:var(--text-40); cursor:pointer; padding:4px; line-height:1;">&times;</div>
     </div>
-    <div style="padding:24px; display:flex; flex-direction:column; gap:14px;">
-      <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
-        <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">COMPANY NAME *</label>
-        <input type="text" id="plCompany" class="full-input" placeholder="e.g. HK Vitals">
-      </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
-          <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">CONTACT NAME *</label>
-          <input type="text" id="plContactName" class="full-input" placeholder="Full name">
-        </div>
-        <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
-          <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">CONTACT EMAIL *</label>
-          <input type="text" id="plContactEmail" class="full-input" placeholder="email@company.com">
+    <div style="display:flex; gap:40px; border-bottom:1px solid var(--border); padding:0 24px;">
+      <div id="tabAddPersonalBulk" class="app-tab active" style="padding:16px 0; cursor:pointer; color:var(--accent); border-bottom:2px solid var(--accent); font-size:13px; font-weight:600; font-family:'SF Mono', monospace;">BULK IMPORT</div>
+      <div id="tabAddPersonalSingle" class="app-tab" style="padding:16px 0; cursor:pointer; color:var(--text-40); font-size:13px; font-weight:600; font-family:'SF Mono', monospace;">SINGLE ENTRY</div>
+    </div>
+    <div style="padding:24px;">
+      <div id="personalModalBatchPanel" style="display:flex; align-items:center; justify-content:center;">
+        <div class="drop-zone" id="personalDropZone" style="width:100%; height:160px;">
+          <div class="drop-icon">📄</div>
+          <p>Drop Apollo CSV here</p>
         </div>
       </div>
-      <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
-        <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">WEBSITE (Optional)</label>
-        <input type="text" id="plWebsite" class="full-input" placeholder="https://...">
+      <div id="personalModalSinglePanel" style="display:none;">
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+            <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">COMPANY NAME *</label>
+            <input type="text" id="plCompany" class="full-input" placeholder="e.g. HK Vitals">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+              <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">CONTACT NAME *</label>
+              <input type="text" id="plContactName" class="full-input" placeholder="Full name">
+            </div>
+            <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+              <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">CONTACT EMAIL *</label>
+              <input type="text" id="plContactEmail" class="full-input" placeholder="email@company.com">
+            </div>
+          </div>
+          <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+            <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">WEBSITE (Optional)</label>
+            <input type="text" id="plWebsite" class="full-input" placeholder="https://...">
+          </div>
+          <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
+            <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">RELATIONSHIP CONTEXT *</label>
+            <textarea id="plRelationship" rows="3" class="full-input" placeholder='e.g. "Worked on HK Vitals brand identity as design lead in 2021"' style="resize:vertical;"></textarea>
+          </div>
+          <button id="savePersonalLeadBtn" class="primary-btn" style="width:100%; justify-content:center; height:36px; font-size:12px; margin-top:4px;">Add Lead</button>
+        </div>
       </div>
-      <div class="input-group" style="display:flex; flex-direction:column; gap:6px;">
-        <label style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace;">RELATIONSHIP CONTEXT *</label>
-        <textarea id="plRelationship" rows="3" class="full-input" placeholder='e.g. "Worked on HK Vitals brand identity as design lead in 2021"' style="resize:vertical;"></textarea>
-      </div>
-      <button id="savePersonalLeadBtn" class="primary-btn" style="width:100%; justify-content:center; height:36px; font-size:12px; margin-top:4px;">Add Lead</button>
     </div>
   </div>
 </div>

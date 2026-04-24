@@ -439,6 +439,61 @@ tr:hover {
   white-space: pre-wrap;
   color: var(--text-95);
 }
+.email-edit-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.email-subject-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-95);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.email-subject-input:focus {
+  border-color: var(--accent);
+}
+.email-body-textarea {
+  width: 100%;
+  min-height: 200px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-95);
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.email-body-textarea:focus {
+  border-color: var(--accent);
+}
+.save-edit-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.save-edit-btn:hover {
+  opacity: 0.85;
+}
 
 button {
   cursor: pointer;
