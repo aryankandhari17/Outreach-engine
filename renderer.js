@@ -1070,12 +1070,12 @@ function renderTable() {
     } else if (hasQueued) {
       ctaHtml = `<button class="process-batch-inline-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; font-family:'SF Mono',monospace; opacity:${isProcessing?'0.5':'1'}; pointer-events:${isProcessing?'none':'auto'};">PROCESS BATCH</button>`;
     } else if (hasReady || isFullyExported) {
-      const reprocessBtnHtml = `<button class="reprocess-batch-inline-btn outline-btn" style="padding:6px 14px; font-size:11px; height:32px; font-family:'SF Mono',monospace; margin-right:20px; opacity:${isProcessing?'0.4':'1'}; pointer-events:${isProcessing?'none':'auto'};">REPROCESS</button>`;
+      const reprocessBtnHtml = `<button class="reprocess-batch-inline-btn outline-btn" style="padding:6px 14px; font-size:11px; height:32px; font-family:'SF Mono',monospace; opacity:${isProcessing?'0.4':'1'}; pointer-events:${isProcessing?'none':'auto'};">REPROCESS</button>`;
       if (currentMode === 'uiux' && activeTiers.length > 0) {
         const n = activeTiers.length;
-        ctaHtml = `${reprocessBtnHtml}<button class="export-all-groups-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT ALL ${n} GROUP${n === 1 ? '' : 'S'}</button>`;
+        ctaHtml = `<div style="display:flex;align-items:center;gap:20px;">${reprocessBtnHtml}<button class="export-all-groups-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT ALL ${n} GROUP${n === 1 ? '' : 'S'}</button></div>`;
       } else {
-        ctaHtml = `${reprocessBtnHtml}<button class="export-batch-inline-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT BATCH</button>`;
+        ctaHtml = `<div style="display:flex;align-items:center;gap:20px;">${reprocessBtnHtml}<button class="export-batch-inline-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT BATCH</button></div>`;
       }
     }
 
