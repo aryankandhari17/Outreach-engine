@@ -85,6 +85,18 @@ const AI_REPAIR_MAX_TOKENS = 1200;
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+function getClaudeKey() {
+  return String(localStorage.getItem('claudeKey') || '').trim();
+}
+
+function ensureClaudeKeyBeforeProcessing() {
+  const key = getClaudeKey();
+  const looksValid = /^sk-ant-/.test(key) && key.length > 20;
+  if (looksValid) return true;
+  alert('Claude API key is missing or invalid.\n\nOpen Settings → GENERAL & AI and set a valid key that starts with "sk-ant-".');
+  return false;
+}
+
 function normalizeCampaignName(name) {
   return String(name || '').trim();
 }
@@ -842,6 +854,7 @@ function renderTable() {
       tr.querySelector('.process-inline-btn').onclick = async (e) => {
         e.stopPropagation();
         if (l.status === 'Processing') return;
+        if (!ensureClaudeKeyBeforeProcessing()) return;
         l.status = 'Processing';
         renderTable();
         await processLead(l);
@@ -974,6 +987,7 @@ function renderTable() {
         renderTable();
         return;
       }
+      if (!ensureClaudeKeyBeforeProcessing()) return;
       currentProcessingBatch = batchKey;
       isProcessing = true; cancelProcessing = false;
       renderTable();
@@ -1325,8 +1339,15 @@ function generateSequences(lead) {
 
 async function processLead(lead) {
   const model = localStorage.getItem('activeModel') || 'claude-sonnet-4-5';
-  const apiKey = localStorage.getItem('claudeKey');
+  const apiKey = getClaudeKey();
   const sysPrompt = lead.mode === 'branding' ? activeBrandingPrompt : activeUiuxPrompt;
+  if (!apiKey || !/^sk-ant-/.test(apiKey)) {
+    lead.status = 'Error';
+    lead.errorMsg = 'Claude API key missing or invalid. Open Settings and add a valid key.';
+    renderTable();
+    await window.electronAPI.saveState(leads);
+    return;
+  }
   
   try {
     const scraped = await window.electronAPI.scrapeWebsite(lead.websiteURL);
@@ -1503,7 +1524,8 @@ document.getElementById('closeSettingsBtn').onclick = () => {
   const safeSave = (key, id) => { const v = safeGetValue(id); if (v !== undefined) localStorage.setItem(key, v); };
   const safeSaveCheck = (key, id) => { const v = safeGetChecked(id); if (v !== undefined) localStorage.setItem(key, v); };
 
-  safeSave('claudeKey', 'claudeKey');
+  const claudeKeyValue = safeGetValue('claudeKey');
+  if (claudeKeyValue !== undefined) localStorage.setItem('claudeKey', String(claudeKeyValue).trim());
   safeSave('activeModel', 'activeModel');
 
   safeSave('uiuxSenderName', 'uiuxSenderName');
@@ -1811,6 +1833,7 @@ document.getElementById('batchSizeInput').addEventListener('change', () => { rea
 
 document.getElementById('processNextBatchBtn').onclick = async () => {
   if (isProcessing) return;
+  if (!ensureClaudeKeyBeforeProcessing()) return;
   const filterBatch = document.getElementById('batchSelector').value;
   const filterCountry = document.getElementById('countryFilter').value;
   
