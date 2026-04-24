@@ -1402,7 +1402,7 @@ function generateSequences(lead) {
     } else if (tier === 'strong') {
       return {
         e1s: `Quick thought on ${company}'s website`,
-        e1b: `Hi ${firstName},\n\n${opening}\n\nI might be wrong, but ${obs}.\n\n${sig}`,
+        e1b: `Hi ${firstName},\n\n${opening}\n\nI might be wrong, but ${obs}.\n\nSmall UX tweaks here often lift enquiries without changing traffic.\n\nOut of curiosity, is improving the website experience part of your roadmap this year?\n\n${sig}`,
         e2s: `Re: ${company}'s website`,
         e2b: `Hi ${firstName},\n\nFollowing up on my note — here are a few things I noticed:\n\n${pointers}\n\nThese are the kinds of small changes that tend to shift how visitors perceive a business — not a redesign, but targeted refinements that make the difference between someone browsing and someone reaching out.\n\n${sig}`,
         e3s: `Re: quick thoughts`,
