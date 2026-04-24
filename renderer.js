@@ -556,6 +556,7 @@ const saveAllState = () => {
   }, 500);
 };
 
+// Fallback list — used on first run, when the API key is missing, or if /v1/models fails.
 const MODELS_MAP = {
   Claude: [
     { id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5 / 4.6 (Latest)' },
@@ -565,6 +566,84 @@ const MODELS_MAP = {
     { id: 'claude-3-opus-20240229', label: 'Claude Opus 3' }
   ]
 };
+
+const MODELS_CACHE_KEY = 'modelsCache';
+const MODELS_CACHE_TIME_KEY = 'modelsCacheTime';
+const MODELS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function getCachedModels() {
+  try {
+    const raw = localStorage.getItem(MODELS_CACHE_KEY);
+    const ts = parseInt(localStorage.getItem(MODELS_CACHE_TIME_KEY) || '0', 10);
+    if (!raw || !ts) return null;
+    if (Date.now() - ts > MODELS_CACHE_TTL_MS) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    return parsed;
+  } catch (e) { return null; }
+}
+
+function rankModel(m) {
+  const id = (m.id || '').toLowerCase();
+  let score = 0;
+  if (id.includes('opus')) score += 3000;
+  else if (id.includes('sonnet')) score += 2000;
+  else if (id.includes('haiku')) score += 1000;
+  const versionMatch = id.match(/-(\d)-(\d)/);
+  if (versionMatch) score += parseInt(versionMatch[1], 10) * 100 + parseInt(versionMatch[2], 10) * 10;
+  if (m.created_at) {
+    const t = Date.parse(m.created_at);
+    if (!isNaN(t)) score += t / 1e11;
+  }
+  return score;
+}
+
+async function fetchAvailableModels({ force = false } = {}) {
+  const apiKey = localStorage.getItem('claudeKey');
+  if (!apiKey) { console.log('[models] skip fetch — no claudeKey'); return null; }
+
+  if (!force) {
+    const cached = getCachedModels();
+    if (cached) { MODELS_MAP.Claude = cached; return cached; }
+  }
+
+  if (!window.electronAPI || !window.electronAPI.aiCall) {
+    console.warn('[models] electronAPI.aiCall unavailable');
+    return null;
+  }
+
+  try {
+    const resp = await window.electronAPI.aiCall({
+      url: 'https://api.anthropic.com/v1/models?limit=1000',
+      method: 'GET',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
+    });
+    if (!resp || !resp.ok || !resp.data || !Array.isArray(resp.data.data)) {
+      console.warn('[models] bad response', resp && (resp.error || resp.status));
+      return null;
+    }
+    const claudeModels = resp.data.data
+      .filter(m => m && typeof m.id === 'string' && m.id.toLowerCase().startsWith('claude'))
+      .map(m => ({ id: m.id, label: m.display_name || m.id, created_at: m.created_at }))
+      .sort((a, b) => rankModel(b) - rankModel(a));
+    if (claudeModels.length === 0) return null;
+
+    console.log('[models] using ' + claudeModels.length + ' Claude models');
+    MODELS_MAP.Claude = claudeModels;
+    localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify(claudeModels));
+    localStorage.setItem(MODELS_CACHE_TIME_KEY, String(Date.now()));
+    return claudeModels;
+  } catch (e) {
+    console.warn('[models] fetch failed:', e && e.message);
+    return null;
+  }
+}
+
+async function refreshModelsFromApi({ force = false } = {}) {
+  const fetched = await fetchAvailableModels({ force });
+  if (fetched) updateModelDropdown();
+  return fetched;
+}
 
 function updateModelDropdown() {
   const modelSelect = document.getElementById('activeModel');
@@ -608,7 +687,10 @@ async function initApp() {
 
   // Load AI Key
   safeSetValue('claudeKey', localStorage.getItem('claudeKey') || '');
+  const cachedModels = getCachedModels();
+  if (cachedModels) MODELS_MAP.Claude = cachedModels;
   updateModelDropdown();
+  refreshModelsFromApi();
 
   // Load Sender Identities
   safeSetValue('uiuxSenderName', localStorage.getItem('uiuxSenderName') || 'Aryan');
@@ -1476,6 +1558,7 @@ document.getElementById('settingsBtn').onclick = () => {
     // Reload values to ensure no unsaved edits linger
     safeSetValue('claudeKey', localStorage.getItem('claudeKey') || '');
     updateModelDropdown();
+    refreshModelsFromApi();
 
     safeSetValue('uiuxSenderName', localStorage.getItem('uiuxSenderName') || '');
     safeSetValue('uiuxSenderTitle', localStorage.getItem('uiuxSenderTitle') || '');
@@ -1519,8 +1602,11 @@ document.getElementById('closeSettingsBtn').onclick = () => {
   const safeSave = (key, id) => { const v = safeGetValue(id); if (v !== undefined) localStorage.setItem(key, v); };
   const safeSaveCheck = (key, id) => { const v = safeGetChecked(id); if (v !== undefined) localStorage.setItem(key, v); };
 
+  const prevClaudeKey = localStorage.getItem('claudeKey') || '';
   safeSave('claudeKey', 'claudeKey');
   safeSave('activeModel', 'activeModel');
+  const newClaudeKey = localStorage.getItem('claudeKey') || '';
+  if (newClaudeKey && newClaudeKey !== prevClaudeKey) refreshModelsFromApi({ force: true });
 
   safeSave('uiuxSenderName', 'uiuxSenderName');
   safeSave('uiuxSenderTitle', 'uiuxSenderTitle');

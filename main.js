@@ -257,11 +257,12 @@ ipcMain.handle('open:external', async (event, url) => {
 
 ipcMain.handle('ai:call', async (event, { url, method, headers, body }) => {
   try {
-    const response = await fetch(url, {
-      method,
-      headers,
-      body: JSON.stringify(body)
-    });
+    const init = { method: method || 'POST', headers };
+    const upperMethod = (init.method || '').toUpperCase();
+    if (body !== undefined && upperMethod !== 'GET' && upperMethod !== 'HEAD') {
+      init.body = JSON.stringify(body);
+    }
+    const response = await fetch(url, init);
     const data = await response.json();
     return { ok: response.ok, status: response.status, data };
   } catch (error) {
