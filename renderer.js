@@ -2746,7 +2746,11 @@ function renderPersonalTable() {
     tr.innerHTML = `
       <td>${l.company}</td>
       <td>${l.contactName}</td>
-      <td style="font-size:11px; color:var(--text-70); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${csvRole}">${csvRole}</td>
+      <td style="padding:0 6px;">
+        <input class="csv-role-input" value="${csvRole.replace(/"/g, '&quot;')}" placeholder="—" title="${csvRole}"
+          style="background:transparent; border:1px solid transparent; border-radius:3px; padding:2px 4px; font-size:11px; font-family:'SF Mono',monospace; color:var(--text-70); width:100%; box-sizing:border-box; outline:none;"
+          onfocus="this.style.borderColor='var(--border)'" onblur="this.style.borderColor='transparent'"/>
+      </td>
       <td style="position:relative;">
         <select class="role-select" style="background:transparent; border:1px solid var(--border); border-radius:4px; padding:2px 4px; font-size:11px; font-family:'SF Mono',monospace; cursor:pointer; outline:none; max-width:120px; ${roleColor}">
           ${roleOptionsHtml}
@@ -2757,6 +2761,9 @@ function renderPersonalTable() {
       <td style="color:var(--accent);">${webDisplay}</td>
       <td class="${statusClass}" style="width:120px;"><div style="display:flex;align-items:center;"><span class="status-dot"></span>${l.status}</div></td>
     `;
+    const csvRoleInput = tr.querySelector('.csv-role-input');
+    csvRoleInput.addEventListener('input', (e) => { l.contactTitle = e.target.value; savePersonalLeads(); });
+    csvRoleInput.addEventListener('click', (e) => e.stopPropagation());
     const roleSelect = tr.querySelector('.role-select');
     roleSelect.addEventListener('change', (e) => {
       e.stopPropagation();
@@ -2766,7 +2773,7 @@ function renderPersonalTable() {
     });
     roleSelect.addEventListener('click', (e) => e.stopPropagation());
     tr.onclick = (e) => {
-      if (e.target.closest('.role-select')) return;
+      if (e.target.closest('.role-select') || e.target.closest('.csv-role-input')) return;
       openPersonalLeadDetail(l);
     };
     return tr;
@@ -2785,8 +2792,13 @@ function renderPersonalTable() {
     const hdr = document.createElement('tr');
     hdr.innerHTML = `
       <td colspan="8" style="padding:10px 20px; font-family:'SF Mono',monospace; font-size:11px; color:rgba(255,255,255,0.35); font-weight:600; letter-spacing:0.8px; border-bottom:1px solid var(--border); background:#111113; position:sticky; top:40px; z-index:3; text-transform:uppercase;">
-        Single Entries <span style="color:rgba(255,255,255,0.2); font-weight:400; margin-left:8px;">${manualLeads.length} lead${manualLeads.length !== 1 ? 's' : ''}</span>
+        <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+          <span>Single Entries <span style="color:rgba(255,255,255,0.2); font-weight:400; margin-left:8px;">${manualLeads.length} lead${manualLeads.length !== 1 ? 's' : ''}</span></span>
+          <button class="export-manual-btn primary-btn" style="padding:4px 12px; font-size:11px; height:28px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace; text-transform:uppercase;">EXPORT ALL</button>
+        </div>
       </td>`;
+    const exportManualBtn = hdr.querySelector('.export-manual-btn');
+    exportManualBtn.onclick = (e) => { e.stopPropagation(); exportPersonalBatch(manualLeads); };
     tbody.appendChild(hdr);
     manualLeads.forEach(l => tbody.appendChild(createPersonalRow(l)));
   }
