@@ -2684,9 +2684,11 @@ function renderPersonalTable() {
     const roleOptionsHtml = ROLE_OPTIONS.map(r =>
       `<option value="${r}"${r === l.role ? ' selected' : ''}>${r}</option>`
     ).join('');
+    const csvRole = l.contactTitle || '-';
     tr.innerHTML = `
       <td>${l.company}</td>
       <td>${l.contactName}</td>
+      <td style="font-size:11px; color:var(--text-70); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px;" title="${csvRole}">${csvRole}</td>
       <td style="position:relative;">
         <select class="role-select" style="background:transparent; border:1px solid var(--border); border-radius:4px; padding:2px 6px; font-size:11px; font-family:'SF Mono',monospace; cursor:pointer; outline:none; ${roleColor}">
           ${roleOptionsHtml}
@@ -2724,7 +2726,7 @@ function renderPersonalTable() {
   if (manualLeads.length > 0) {
     const hdr = document.createElement('tr');
     hdr.innerHTML = `
-      <td colspan="7" style="padding:10px 20px; font-family:'SF Mono',monospace; font-size:11px; color:rgba(255,255,255,0.35); font-weight:600; letter-spacing:0.8px; border-bottom:1px solid var(--border); background:#111113; position:sticky; top:40px; z-index:3; text-transform:uppercase;">
+      <td colspan="8" style="padding:10px 20px; font-family:'SF Mono',monospace; font-size:11px; color:rgba(255,255,255,0.35); font-weight:600; letter-spacing:0.8px; border-bottom:1px solid var(--border); background:#111113; position:sticky; top:40px; z-index:3; text-transform:uppercase;">
         Single Entries <span style="color:rgba(255,255,255,0.2); font-weight:400; margin-left:8px;">${manualLeads.length} lead${manualLeads.length !== 1 ? 's' : ''}</span>
       </td>`;
     tbody.appendChild(hdr);
@@ -2740,7 +2742,7 @@ function renderPersonalTable() {
     }
     const hdr = document.createElement('tr');
     hdr.innerHTML = `
-      <td colspan="7" style="padding:16px 20px; font-family:'Inter',sans-serif; font-size:14px; color:#FFFFFF; font-weight:700; border-bottom:1px solid var(--border); background:#111113; position:sticky; top:40px; z-index:3;">
+      <td colspan="8" style="padding:16px 20px; font-family:'Inter',sans-serif; font-size:14px; color:#FFFFFF; font-weight:700; border-bottom:1px solid var(--border); background:#111113; position:sticky; top:40px; z-index:3;">
         <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
           <div style="display:flex; align-items:center; letter-spacing:0.5px;">
             ${batchKey.toUpperCase()} <span style="color:var(--text-40); font-size:12px; margin-left:12px; font-weight:500;">${list.length} lead${list.length !== 1 ? 's' : ''}${bDateStr ? ' · ' + bDateStr : ''}</span>
@@ -3138,6 +3140,7 @@ function processPersonalCSVContent(content, fileName) {
       const companyRaw = pick('company_name', 'company', 'company name', 'organization', 'account name', 'account_name', 'org_name') || deriveCompany(website, emails[0]);
       const company = companyRaw.replace(/^www\./i, '').trim() || 'Unknown Company';
       const relationship = pick('relationship_context', 'relationship', 'context', 'notes', 'note') || `Imported from ${fileName}`;
+      const contactTitle = pick('title', 'job_title', 'job title', 'person title', 'position', 'role', 'person_title', 'primary_contact_title', 'founder_title');
 
       emails.forEach((email, emailIndex) => {
         const exists = personalLeads.some(l => normalizeEmail(l.contactEmail) === normalizeEmail(email));
@@ -3152,6 +3155,7 @@ function processPersonalCSVContent(content, fileName) {
           id: `${Date.now()}-${rowIndex}-${emailIndex}`,
           company,
           contactName,
+          contactTitle,
           contactEmail: email,
           website,
           relationship,
