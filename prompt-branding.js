@@ -230,6 +230,7 @@ The ONLY time you skip is when the site loaded but had too little content to ana
 
 ### THE QUALITY TEST (for strong and soft tiers):
 - Could I copy this brand_observation to another company in the same industry and it would still work? If yes → it's too generic → rewrite.
+- Would the founder, looking at their own brand right now, say "huh, fair point" or would they say "no, that's wrong" / "we did that on purpose"? If the latter — downgrade to compliment tier. When in doubt, downgrade.
 - Would a CEO read this and think "yeah, we should be making more of that" or would they think "we already do that"? If the latter → rewrite or move to compliment tier.
 
 ---
@@ -291,6 +292,9 @@ For a consulting firm: "the depth here — 15 years, Fortune 500 clients, cross-
 - NEVER mention outdated news, blog posts, or old content
 - Never use em-dashes ("—") — use periods or commas instead
 - CRITICAL: The observation must NOT contain the word "but" as its own connector. Since the template already prepends "I might be wrong, but", writing "but" inside produces "I might be wrong, but X, but Y" — broken output. Reword using "despite", "even though", or two clean clauses without a second "but".
+- ENCOURAGED ANGLES (when supported by the scrape): testimonials, customer reviews, named customer logos, star ratings, and other social proof are STRONG angles. Reference them generically without inventing names. GOOD: "the named customer reviews paired with a 4.8 rating make the headline feel earned", "the wall of testimonials with real business names attached". BAD: writing any specific name you cannot find verbatim in the scraped text.
+- 🚨 ABSOLUTE RULE — ZERO TOLERANCE FOR HALLUCINATED NAMES 🚨 This is a NO-WAY ZONE. You may NEVER write a specific third-party business name, customer name, testimonial source, partner, brand, person's name, or product name UNLESS that exact string appears character-for-character in the scraped page content provided to you. No exceptions, no "probably on the site", no inferences. If you are 99% sure a name is on the site but cannot find the exact characters in the input, treat it as if it does not exist. Refer to it generically ("their featured customers", "the named reviews"). Inventing names is a critical failure. When in doubt, ALWAYS go generic.
+- 🚨 NO SOURCE-TEXT ZERO STATS 🚨 If you see a stat phrase like "0 customers", "0+ Years", "0 million projects", or any "0 [unit]" pattern in the source, treat it as a SCRAPER ARTIFACT, not real data. Animated counters render as 0 in the static HTML the scraper sees, then animate to real values via JavaScript that the scraper cannot execute. Do NOT cite, paraphrase, or build observations around these zero-valued numbers, the real values are unknown. "0 million customers impacted" is the artifact, not a claim. Pick a different angle (positioning, naming, design, customer-type framing) that does not depend on numbers. If the input contains a \`[SCRAPER NOTE: ... animated stat counters ...]\` line, this rule applies with maximum strictness.
 
 ---
 

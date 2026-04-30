@@ -88,14 +88,14 @@
             <thead>
               <tr>
                 <th style="width: 30px;"></th>
-                <th class="resizable-col" data-col="name" class="sortable" data-sort="name" style="width:110px;">Name</th>
-                <th class="resizable-col" data-col="company" class="sortable" data-sort="company" style="width:130px;">Company</th>
-                <th class="resizable-col" data-col="industry" class="sortable" data-sort="industry" style="width:120px;">Industry</th>
-                <th class="resizable-col" data-col="country" class="sortable" data-sort="country" style="width:80px;">Country</th>
-                <th class="resizable-col" data-col="website" class="sortable" data-sort="website" style="width:140px;">Website</th>
-                <th class="resizable-col" data-col="status" class="sortable" data-sort="status" style="width:90px;">Status</th>
+                <th class="resizable-col sortable" data-col="name" data-sort="name" style="width:110px;">Name</th>
+                <th class="resizable-col sortable" data-col="company" data-sort="company" style="width:100px;">Company</th>
+                <th class="resizable-col sortable" data-col="industry" data-sort="industry" style="width:120px;">Industry</th>
+                <th class="resizable-col sortable" data-col="country" data-sort="country" style="width:80px;">Country</th>
+                <th class="resizable-col sortable" data-col="website" data-sort="website" style="width:140px;">Website</th>
+                <th class="resizable-col sortable" data-col="status" data-sort="status" style="width:90px;">Status</th>
                 <th class="resizable-col" data-col="scores" id="scoreHeader" style="width:110px;">Scores</th>
-                <th style="width:160px;">Actions</th>
+                <th class="resizable-col" data-col="actions" style="width:160px;">Actions</th>
               </tr>
             </thead>
             <tbody id="leadsTableBody">
@@ -184,11 +184,30 @@
               <svg style="width:14px;height:14px; color:var(--accent); stroke-width:3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
             </div>
             <button id="editLeadBtn" class="outline-btn" style="font-size: 11px; padding: 6px 16px; border-color: rgba(255,255,255,0.1); color: var(--text-70);">EDIT LEAD</button>
+            <button id="viewScrapeBtn" class="outline-btn" style="font-size: 11px; padding: 6px 16px; border-color: rgba(255,255,255,0.1); color: var(--text-70); display: none;">VIEW SCRAPE</button>
           </div>
         </div>
         <div id="detailStatusBadge" class="status-queued" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; display: flex; align-items: center;">
           <span class="status-dot"></span><span id="detailStatusText">Queued</span>
         </div>
+      </div>
+    </div>
+
+    <!-- Scrape Modal — opened by VIEW SCRAPE for manual hallucination verification -->
+    <div id="scrapeModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9000; align-items:center; justify-content:center;">
+      <div style="background:var(--bg); border:1px solid var(--border); border-radius:8px; width:80vw; max-width:1100px; height:80vh; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:11px; color:var(--accent); font-family:'SF Mono',monospace; font-weight:700; letter-spacing:0.5px;">SCRAPE — WHAT THE AI ACTUALLY SAW</div>
+            <div id="scrapeModalSubtitle" style="font-size:12px; color:var(--text-70); margin-top:4px;">Use this to verify every named entity, stat, and quote in the email is grounded in the page text.</div>
+          </div>
+          <button id="closeScrapeModalBtn" class="outline-btn" style="font-size:11px; padding:6px 14px;">CLOSE</button>
+        </div>
+        <div style="display:flex; gap:12px; padding:12px 20px; border-bottom:1px solid var(--border); align-items:center;">
+          <input id="scrapeSearchInput" type="text" placeholder="Search the scrape (Cmd+F)…" style="flex:1; background:transparent; border:1px solid var(--border); color:var(--text-95); font-size:13px; padding:6px 10px; border-radius:6px; font-family:inherit; outline:none;">
+          <span id="scrapeSearchCount" style="font-size:11px; color:var(--text-40); font-family:'SF Mono',monospace; min-width:80px; text-align:right;">0 matches</span>
+        </div>
+        <pre id="scrapeContent" style="flex:1; overflow:auto; margin:0; padding:20px; font-family:'SF Mono', monospace; font-size:12px; color:var(--text-95); white-space:pre-wrap; word-wrap:break-word; line-height:1.5; background:var(--panel);"></pre>
       </div>
     </div>
 
@@ -293,6 +312,18 @@
       </div>
     </div>
 
+    <!-- Signature toggle -->
+    <div id="pdSignatureSection" style="margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);">
+        <span style="font-size:10px; font-family:'SF Mono',monospace; color:var(--text-40); letter-spacing:1px;">SIGNATURE</span>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-left:auto;">
+          <input type="checkbox" id="pdSignatureToggle">
+          <span id="pdSignatureStatus" style="font-size:12px; color:var(--text-70);">Off</span>
+        </label>
+      </div>
+      <div id="pdSignaturePreview" style="display:none; font-size:12px; color:var(--text-40); padding:10px 16px; border:1px solid var(--border); border-top:none; border-radius:0 0 var(--radius) var(--radius); white-space:pre-line; line-height:1.7; background:rgba(0,0,0,0.15);"></div>
+    </div>
+
     <!-- Dynamic email composers — rendered by JS -->
     <div id="pdEmailsContainer"></div>
 
@@ -322,6 +353,7 @@
       <div id="setTabGeneral" class="app-tab active" style="padding: 10px 0; font-size: 11px; cursor: pointer;">GENERAL & AI</div>
       <div id="setTabUiux" class="app-tab" style="padding: 10px 0; font-size: 11px; cursor: pointer;">UI/UX SENDER</div>
       <div id="setTabBranding" class="app-tab" style="padding: 10px 0; font-size: 11px; cursor: pointer;">BRANDING SENDER</div>
+      <div id="setTabPersonal" class="app-tab" style="padding: 10px 0; font-size: 11px; cursor: pointer;">PERSONAL SENDER</div>
     </div>
 
     <!-- General Settings -->
@@ -360,6 +392,16 @@
         <div class="input-row"><span>Title</span><input type="text" id="brandingSenderTitle" class="minimal-input" placeholder="Partner, Labs22"></div>
         <div class="input-row"><span>Website</span><input type="text" id="brandingSenderWeb" class="minimal-input" placeholder="labs22.com"></div>
         <div class="input-row" style="margin-top: 12px;"><span>Credibility</span><label style="display: flex; align-items: center; gap: 8px;"><input type="checkbox" id="brandingEnoc"> ENOC / Visa Line</label></div>
+      </div>
+    </div>
+
+    <!-- Personal Sender Settings -->
+    <div id="settingsSenderPersonal" class="settings-pane" style="display: none;">
+      <div class="settings-group">
+        <label>PERSONAL SENDER IDENTITY</label>
+        <div class="input-row"><span>Name</span><input type="text" id="personalSenderName" class="minimal-input" placeholder="Your Name"></div>
+        <div class="input-row"><span>Title</span><input type="text" id="personalSenderTitle" class="minimal-input" placeholder="Partner, Labs22"></div>
+        <div class="input-row"><span>Website</span><input type="text" id="personalSenderWeb" class="minimal-input" placeholder="labs22.com"></div>
       </div>
     </div>
 

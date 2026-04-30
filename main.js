@@ -153,55 +153,283 @@ ipcMain.handle('state:load', async () => {
   return null;
 });
 
-ipcMain.handle('scrape:url', async (event, urlStr) => {
+function normalizeTargetUrl(urlStr) {
+  let target = String(urlStr || '').trim();
+  if (!target.startsWith('http')) target = 'https://' + target;
+  return target;
+}
+
+function getUrlCandidates(urlStr) {
+  const first = normalizeTargetUrl(urlStr);
+  const candidates = [first];
   try {
-    let target = urlStr;
-    if (!target.startsWith('http')) {
-      target = 'https://' + target;
+    const u = new URL(first);
+    if (!u.hostname.startsWith('www.')) {
+      const withWww = new URL(u.href);
+      withWww.hostname = 'www.' + u.hostname;
+      candidates.push(withWww.href);
+    } else {
+      const withoutWww = new URL(u.href);
+      withoutWww.hostname = u.hostname.replace(/^www\./, '');
+      candidates.push(withoutWww.href);
     }
-    const html = await fetchHtml(target);
+  } catch (e) {}
+  return [...new Set(candidates)];
+}
 
-    // Extract structured metadata (always present even on JS-rendered sites)
-    const getMeta = (name) => {
-      const m = html.match(new RegExp(`<meta[^>]+(?:name|property)=["']${name}["'][^>]+content=["']([^"']+)["']`, 'i'))
-                || html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["']${name}["']`, 'i'));
-      return m ? m[1].trim() : '';
-    };
-    const title = (html.match(/<title[^>]*>([^<]+)<\/title>/i) || [])[1] || '';
-    const desc = getMeta('description') || getMeta('og:description');
-    const ogTitle = getMeta('og:title');
-    const ogSiteName = getMeta('og:site_name');
+function compactText(text) {
+  return String(text || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 
-    // Extract JSON-LD structured data (rich product/org info)
-    const jsonLdBlocks = [];
-    const jsonLdRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
-    let jm;
-    while ((jm = jsonLdRe.exec(html)) !== null && jsonLdBlocks.length < 3) {
-      try { jsonLdBlocks.push(JSON.stringify(JSON.parse(jm[1]))); } catch(e) {}
-    }
+function stripAnimatedZeroStats(text) {
+  return String(text || '').replace(
+    /\b0\s*\+?(?:\s+\w+){0,3}\s+(?:million|billion|thousand|years?|months?|days?|weeks?|hours?|customers?|users?|projects?|clients?|countries|brands?|hotels?|properties|locations?|stores?|partners?|banks?|orders?|sales?|reviews?|cities|markets?|languages?|awards?|stories|members?|installations?|deployments?|implementations?)\b(?:\s+\w+){0,5}/gi,
+    ' '
+  ).replace(/\s+/g, ' ').trim();
+}
 
-    // Strip scripts/styles and get visible body text
-    const bodyText = html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
-      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    const meta = [
-      title && `Title: ${title}`,
-      ogTitle && ogTitle !== title && `OG Title: ${ogTitle}`,
-      ogSiteName && `Site Name: ${ogSiteName}`,
-      desc && `Description: ${desc}`,
-      jsonLdBlocks.length && `Structured Data: ${jsonLdBlocks.join(' | ')}`
-    ].filter(Boolean).join('\n');
-
-    const combined = (meta ? meta + '\n\n' : '') + bodyText;
-    return combined.substring(0, 6000);
-  } catch (error) {
-    console.error('Scrape error:', error);
-    return null;
+function buildScraperNotes(sourceHtml, visibleText, media = {}) {
+  const notes = [];
+  const counterUnitRe = /\b0\s*\+?\s*(?:million|billion|thousand|years?|months?|days?|weeks?|hours?|customers?|users?|projects?|clients?|countries|brands?|hotels?|properties|locations?|stores?|partners?|banks?|orders?|sales?|reviews?|cities|markets?|languages?|awards?|stories|members?|installations?|deployments?|implementations?)\b/gi;
+  const zeroTagCount = sourceHtml ? ((sourceHtml.match(/>\s*0\s*<\/[a-z][a-z0-9]*>/gi) || []).length) : 0;
+  const counterPhraseCount = (visibleText.match(counterUnitRe) || []).length;
+  if ((zeroTagCount >= 4 && counterPhraseCount >= 3) || media.animatedCounterHints > 0) {
+    notes.push('[SCRAPER NOTE: This site appears to use animated stat counters. Zero-valued stat phrases have been stripped or should be ignored. Do NOT cite any specific numeric stats unless the rendered text shows the final non-zero value clearly.]');
   }
+
+  const wordCount = visibleText.split(/\s+/).filter(Boolean).length;
+  const lowerBody = visibleText.toLowerCase();
+  const placeholderPhrases = ['launching soon', 'coming soon', 'site under construction', 'under construction', 'be back soon', 'site under maintenance', 'stay tuned', 'launching shortly', 'we are coming'];
+  const placeholderHits = placeholderPhrases.filter(p => lowerBody.includes(p)).length;
+  const wordTokens = lowerBody.match(/\b[a-z]{4,}\b/g) || [];
+  const wordFreq = {};
+  wordTokens.forEach(w => { wordFreq[w] = (wordFreq[w] || 0) + 1; });
+  const maxRepeat = Math.max(0, ...Object.values(wordFreq));
+  const dominantRatio = wordTokens.length ? maxRepeat / wordTokens.length : 0;
+  if ((placeholderHits >= 1 && wordCount < 250) || (maxRepeat >= 5 && dominantRatio > 0.15 && wordCount < 300)) {
+    notes.push('[SCRAPER NOTE: Site appears to be a placeholder, launching-soon, or under-construction page. Do NOT invent specific details from sparse text.]');
+  }
+  if (media.videoCount || media.canvasCount || media.animatedElementCount) {
+    notes.push(`[RENDERED MEDIA NOTE: Detected ${media.videoCount || 0} video element(s), ${media.canvasCount || 0} canvas element(s), and ${media.animatedElementCount || 0} animated/transitioning element(s). Treat video/animation content as present but unreadable unless nearby text or alt labels describe it.]`);
+  }
+  return notes;
+}
+
+async function renderPageSnapshot(url) {
+  const win = new BrowserWindow({
+    show: false,
+    width: 1365,
+    height: 1800,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true
+    }
+  });
+
+  try {
+    await Promise.race([
+      win.loadURL(url, { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Rendered load timeout')), 18000))
+    ]);
+    await new Promise(resolve => setTimeout(resolve, 2500));
+
+    return await win.webContents.executeJavaScript(`
+      (() => {
+        const clean = (s) => String(s || '').replace(/\\s+/g, ' ').trim();
+        const meta = (name) => {
+          const el = document.querySelector('meta[name="' + name + '"], meta[property="' + name + '"]');
+          return el ? clean(el.getAttribute('content')) : '';
+        };
+        const visible = (el) => {
+          if (!el) return false;
+          const style = window.getComputedStyle(el);
+          const rect = el.getBoundingClientRect();
+          return style && style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) !== 0 && rect.width > 0 && rect.height > 0;
+        };
+        const textOf = (sel, max = 80) => Array.from(document.querySelectorAll(sel))
+          .filter(visible).map(el => clean(el.innerText || el.textContent)).filter(Boolean).slice(0, max);
+        const sameOriginLinks = Array.from(document.querySelectorAll('a[href]'))
+          .filter(visible)
+          .map(a => {
+            try {
+              const u = new URL(a.href, location.href);
+              return { text: clean(a.innerText || a.getAttribute('aria-label') || a.title || ''), href: u.href, origin: u.origin };
+            } catch(e) { return null; }
+          })
+          .filter(Boolean);
+        const media = {
+          videoCount: document.querySelectorAll('video, iframe[src*="youtube"], iframe[src*="vimeo"]').length,
+          canvasCount: document.querySelectorAll('canvas').length,
+          animatedElementCount: Array.from(document.querySelectorAll('body *')).filter(el => {
+            const s = window.getComputedStyle(el);
+            return s && ((s.animationName && s.animationName !== 'none') || (s.transitionDuration && s.transitionDuration !== '0s'));
+          }).length,
+          animatedCounterHints: document.body.innerText.match(/\\b0\\s*\\+?\\s*(years?|clients?|projects?|customers?|countries|brands?|hotels?|properties|locations?)\\b/gi)?.length || 0,
+          imageAltText: Array.from(document.images).map(img => clean(img.alt)).filter(Boolean).slice(0, 40)
+        };
+        const bodyClone = document.body.cloneNode(true);
+        bodyClone.querySelectorAll('script, style, noscript, template, svg').forEach(n => n.remove());
+        return {
+          url: location.href,
+          title: clean(document.title),
+          description: meta('description') || meta('og:description'),
+          siteName: meta('og:site_name'),
+          headings: textOf('h1,h2,h3', 120),
+          buttons: textOf('button, [role="button"], input[type="submit"], a.btn, a.button', 80),
+          links: sameOriginLinks,
+          media,
+          text: clean(bodyClone.innerText || bodyClone.textContent || '')
+        };
+      })();
+    `);
+  } finally {
+    if (!win.isDestroyed()) win.destroy();
+  }
+}
+
+function scoreInternalLink(link, origin) {
+  if (!link || link.origin !== origin) return -1;
+  const href = (link.href || '').toLowerCase();
+  const text = (link.text || '').toLowerCase();
+  if (!href || href.includes('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return -1;
+  if (/\.(pdf|jpg|jpeg|png|gif|webp|zip|docx?|xlsx?)($|\?)/i.test(href)) return -1;
+  if (/(privacy|terms|cookie|login|signin|cart|checkout|facebook|instagram|linkedin|twitter|youtube)/i.test(href)) return -1;
+  let score = 0;
+  const combined = href + ' ' + text;
+  [
+    [/about|story|company|who-we-are/, 90],
+    [/services|solutions|what-we-do|capabilities|expertise/, 85],
+    [/products|brands|properties|portfolio|work|projects|case-stud/, 80],
+    [/partner|partnership|franchise|invest|owners|developers/, 75],
+    [/contact|book|demo|enquir|inquir|get-started/, 60]
+  ].forEach(([re, points]) => { if (re.test(combined)) score += points; });
+  if (text.length > 2 && text.length < 40) score += 5;
+  return score;
+}
+
+function combineRenderedSnapshots(snapshots, sourceHtml = '') {
+  const chunks = [];
+  const allNotes = [];
+  const seenLines = new Set();
+  snapshots.forEach((snap, idx) => {
+    const text = stripAnimatedZeroStats(compactText(snap.text || ''));
+    buildScraperNotes(sourceHtml, text, snap.media || {}).forEach(n => { if (!allNotes.includes(n)) allNotes.push(n); });
+    const lines = text.split(/(?<=[.!?])\s+|\n+/).map(compactText).filter(Boolean);
+    const deduped = [];
+    lines.forEach(line => {
+      const key = line.toLowerCase();
+      if (key.length < 4 || seenLines.has(key)) return;
+      seenLines.add(key);
+      deduped.push(line);
+    });
+    chunks.push([
+      `--- RENDERED PAGE ${idx + 1}: ${snap.url} ---`,
+      snap.title && `Title: ${snap.title}`,
+      snap.siteName && `Site Name: ${snap.siteName}`,
+      snap.description && `Description: ${snap.description}`,
+      snap.headings?.length && `Visible Headings: ${snap.headings.join(' | ')}`,
+      snap.buttons?.length && `Visible Buttons / Next Steps: ${snap.buttons.join(' | ')}`,
+      snap.media?.imageAltText?.length && `Image Alt Text: ${snap.media.imageAltText.join(' | ')}`,
+      deduped.slice(0, idx === 0 ? 220 : 120).join(' ')
+    ].filter(Boolean).join('\n'));
+  });
+  return [
+    '[SCRAPER METHOD: Rendered browser extraction. The app loaded the site with JavaScript enabled, waited for client-rendered text, extracted visible text layers, headings, buttons, links, image alt text, and media/animation signals across the homepage plus key internal pages. Video/canvas/animation content is detected but not interpreted unless text describes it.]',
+    allNotes.join('\n'),
+    chunks.join('\n\n')
+  ].filter(Boolean).join('\n\n').substring(0, 30000);
+}
+
+async function scrapeRenderedSite(urlStr) {
+  const target = normalizeTargetUrl(urlStr);
+  const origin = new URL(target).origin;
+  const home = await renderPageSnapshot(target);
+  const chosen = [];
+  const seen = new Set([home.url.replace(/\/$/, '')]);
+  (home.links || [])
+    .map(link => ({ link, score: scoreInternalLink(link, origin) }))
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .forEach(item => {
+      const key = item.link.href.replace(/\/$/, '');
+      if (chosen.length >= 4 || seen.has(key)) return;
+      seen.add(key);
+      chosen.push(item.link.href);
+    });
+
+  const snapshots = [home];
+  for (const href of chosen) {
+    try {
+      const snap = await renderPageSnapshot(href);
+      if (snap && snap.text && snap.text.length > 80) snapshots.push(snap);
+    } catch (e) {
+      console.warn('[OutreachEngine] Rendered subpage scrape failed:', href, e.message);
+    }
+  }
+  return combineRenderedSnapshots(snapshots);
+}
+
+async function scrapeStaticSite(urlStr) {
+  const target = normalizeTargetUrl(urlStr);
+  const html = await fetchHtml(target);
+  const getMeta = (name) => {
+    const m = html.match(new RegExp(`<meta[^>]+(?:name|property)=["']${name}["'][^>]+content=["']([^"']+)["']`, 'i'))
+              || html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["']${name}["']`, 'i'));
+    return m ? m[1].trim() : '';
+  };
+  const title = (html.match(/<title[^>]*>([^<]+)<\/title>/i) || [])[1] || '';
+  const desc = getMeta('description') || getMeta('og:description');
+  const ogTitle = getMeta('og:title');
+  const ogSiteName = getMeta('og:site_name');
+  const bodyText = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const cleanBody = stripAnimatedZeroStats(bodyText);
+  const notes = buildScraperNotes(html, cleanBody);
+  const meta = [
+    '[SCRAPER METHOD: Static HTML fallback. Rendered extraction failed or returned too little text.]',
+    ...notes,
+    title && `Title: ${title}`,
+    ogTitle && ogTitle !== title && `OG Title: ${ogTitle}`,
+    ogSiteName && `Site Name: ${ogSiteName}`,
+    desc && `Description: ${desc}`
+  ].filter(Boolean).join('\n');
+  return (meta + '\n\n' + cleanBody).substring(0, 12000);
+}
+
+ipcMain.handle('scrape:url', async (event, urlStr) => {
+  const candidates = getUrlCandidates(urlStr);
+  let lastError = null;
+
+  for (const candidate of candidates) {
+    try {
+      const rendered = await scrapeRenderedSite(candidate);
+      const renderedWords = rendered.split(/\s+/).filter(Boolean).length;
+      if (rendered && renderedWords > 120) return rendered;
+      console.warn('[OutreachEngine] Rendered scrape too thin, falling back to static scrape:', candidate);
+    } catch (error) {
+      lastError = error;
+      console.error('Rendered scrape error:', candidate, error);
+    }
+
+    try {
+      return await scrapeStaticSite(candidate);
+    } catch (fallbackError) {
+      lastError = fallbackError;
+      console.error('Static scrape fallback error:', candidate, fallbackError);
+    }
+  }
+
+  console.error('Scrape failed for all URL candidates:', candidates, lastError);
+  return null;
 });
 
 function fetchHtml(url, redirectCount = 0) {

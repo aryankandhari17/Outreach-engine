@@ -179,7 +179,7 @@ Do NOT exaggerate praise. If the site is simply solid, acknowledge one specific 
 
 Before finalising the route, ask yourself:
 
-**If routing to strong:** Can I name the specific issue in one sentence? Would a CEO read it and think "fair point"? Or am I manufacturing a problem because I feel like I should find one? If the latter — move to soft or compliment.
+**If routing to strong:** The observation must be something the founder, looking at their own site right now, would say "huh, fair point" to. If they would respond "no, that's wrong" or "we did that on purpose" — downgrade to soft tier or compliment tier. When in doubt, downgrade. Can I state the issue in one sentence without it sounding theoretical? If not — move to soft or compliment.
 
 **If routing to soft:** Is this a real observation or am I just finding something to say because complimenting feels like I'm not doing my job? If the latter — move to compliment.
 
@@ -210,7 +210,33 @@ Before generating any email fields, verify the route matches the evidence.
 
 **opening_line:** One complete sentence. How you came across them and what you noticed about their positioning. Must describe what they do naturally and reference something specific their site says. Never use em-dashes ("—") — use periods or commas instead. CRITICAL: If the website presents the company under a different brand name than the one provided in the input (e.g., input says "CCK Financial Solutions" but the site brands itself as "Guava Treasury Solutions"), you MUST use the company name from the input data, not the product brand name on the site. The subject line uses the input company name — the body must match.
 
-**specific_observation:** The observation that goes after "I might be wrong, but" in the email. 1-2 sentences. References what their site claims, then notes what a first-time visitor still can't easily figure out. Starts lowercase. No ending period. Never use em-dashes ("—") — use periods or commas instead. CRITICAL: The observation must NOT contain the word "but" as its own connector. Since the template already prepends "I might be wrong, but", writing "but" inside the observation produces "I might be wrong, but X, but Y" — broken output. Instead of "X does Y, but as a first-time visitor Z", write "as a first-time visitor Z, despite X doing Y". The observation should flow as a single clean thought after "I might be wrong, but".
+ENCOURAGED ANGLES (when supported by the scrape): testimonials, customer reviews, named customer logos, ratings (e.g. "4.8 stars"), and other social proof are STRONG, specific angles — use them when the page actually shows them. Reference them GENERICALLY without inventing specific names. GOOD: "the way the site pairs the #1 Booking App claim with a 4.8 rating and named customer reviews", "the wall of testimonials with real business names attached", "the rating badge sitting next to actual reviews". BAD: naming any specific customer ("A La Mode", "Acme Corp") that you cannot literally see in the scraped page text.
+
+🚨 ABSOLUTE RULE — ZERO TOLERANCE FOR HALLUCINATED NAMES 🚨
+This is a NO-WAY ZONE. You may NEVER write a specific third-party business name, customer name, testimonial source, partner, brand, person's name, or product name UNLESS that exact string appears character-for-character in the scraped page content provided to you. No exceptions, no "probably on the site", no inferences from the industry. If you are 99% sure a name is on the site but cannot find the exact characters in the input, treat it as if it does not exist. Refer to it generically instead ("their featured customers", "the named reviews", "the businesses they list"). Inventing names is a critical failure that breaks user trust. When in doubt, ALWAYS go generic.
+
+🛡 GROUNDING RULES — these apply to opening_line, specific_observation, pointers, and design_compliment 🛡
+
+1. **VAGUE-BUT-TRUE BEATS SPECIFIC-AND-FALSE.** If you cannot make a claim specific without inventing, make it less specific instead. The model's instinct is to add details to sound credible — that instinct produces hallucinations. A general observation grounded in the scrape ("the site features named customer testimonials") is ALWAYS better than a specific claim that's invented ("their testimonial from A La Mode mentions a 60% improvement"). Specificity must come from the scrape, never from your judgment about what would sound good.
+
+2. **NO EXTERNAL KNOWLEDGE.** Do not use facts about the company from your training data. Only use what appears in the scrape provided to you. If you happen to "know" something about this company from training, set it aside completely. If the scrape is sparse, the email should be sparse — that's the correct outcome, not a failure to be corrected by adding training-data facts.
+
+3. **NO QUOTATION MARKS AROUND PHRASES.** Do not wrap any phrase in single quotes ('') or double quotes ("") within these fields. Quoted phrases create the impression you're citing the site verbatim — that impression is hard to verify and easy to fake. Use indirect description instead. INSTEAD OF: "their tagline 'simple bookings for serious businesses'", WRITE: "the tagline emphasising simple bookings for serious businesses". INSTEAD OF: "the page mentions 'AI-powered automation'", WRITE: "the AI automation framing on the page".
+
+4. **BANNED SPECIFIC CONTENT** unless the exact string is in the scrape:
+   - Named clients, customers, partners, integrations
+   - Named awards, certifications, accreditations
+   - Specific stats, percentages, counts, dollar figures
+   - Named team members, founders, executives
+   - Reproduced or paraphrased testimonial content (you may say "the testimonials section exists" if it does, but never write what testimonials say)
+   - Specific product / feature names you cannot find in the scrape
+   - Specific section names ("Why Choose Us", "Industries") unless you can verify they exist on the page
+
+5. **NO SOURCE-TEXT ZERO STATS.** If you see a stat phrase like "0 customers", "0+ Years", "0 million projects", or any "0 [unit]" pattern in the source, treat it as a SCRAPER ARTIFACT, not real data. Animated counters render as 0 in the static HTML the scraper sees, then animate to real values via JavaScript that the scraper cannot execute. Do NOT cite, paraphrase, or build observations around these zero-valued numbers. Even if the source text appears to make a confident factual statement like "0 million customers impacted", the "0" is the artifact, not the claim, and the real value is unknown to you. Pick a different angle (positioning, naming, design, customer-type framing) that does not depend on numbers. If the input contains a \`[SCRAPER NOTE: ... animated stat counters ...]\` line, this rule applies with maximum strictness.
+
+If a claim feels powerful but you cannot point to the exact string in the scrape that supports it, REMOVE the claim. Replace with the next-best generic version, or pick a different angle entirely.
+
+**specific_observation:** The observation that goes after "I might be wrong, but" in the email. 1-2 sentences. References what their site claims, then notes what a first-time visitor still can't easily figure out. Starts lowercase. No ending period. Never use em-dashes ("—") — use periods or commas instead. CRITICAL: The observation must NOT contain the word "but" as its own connector. Since the template already prepends "I might be wrong, but", writing "but" inside the observation produces "I might be wrong, but X, but Y" — broken output. Instead of "X does Y, but as a first-time visitor Z", write "as a first-time visitor Z, despite X doing Y". The observation should flow as a single clean thought after "I might be wrong, but". The same ABSOLUTE RULE on hallucinated names applies here: never invent third-party names.
 
 Only use this format if there is a concrete, evidence-backed issue.
 
@@ -410,6 +436,39 @@ labs22.com
 
 ---
 
+## EXAMPLE — WRONG OUTPUT (do NOT do this — illustrates common hallucination patterns):
+
+\`\`\`json
+{
+  "siteLoaded": true,
+  "emailTier": "strong",
+  "siteType": "SaaS / booking software",
+  "opening_line": "I came across Ovatu while looking at booking software in beauty and wellness, and the way the homepage pairs the #1 Booking App claim with a 4.8 rating and named customer reviews from real businesses like A La Mode and Bloom Studios makes the headline feel earned.",
+  "specific_observation": "the testimonial from the founder of A La Mode mentioning a 40% reduction in no-shows is compelling, despite the fact that as a first-time visitor it's still hard to figure out which exact subscription tier delivers that result",
+  "pointers": [
+    "The 'Trusted by 10,000+ businesses worldwide' line in the hero is powerful — pairing it with one named logo strip just below would amplify it further.",
+    "The testimonial from Sarah Chen at Pink Cloud Studio is genuinely persuasive — featuring it earlier in the scroll could improve conversion."
+  ]
+}
+\`\`\`
+
+WHY THIS IS WRONG (every issue here would be a real hallucination):
+- "A La Mode" and "Bloom Studios" — INVENTED. These names were never in the scrape. The model fabricated them to sound credible.
+- "40% reduction in no-shows" — INVENTED stat. Even if the page has testimonials, the model has no idea what specific stat any testimonial mentions unless that exact stat appears in the scrape.
+- "founder of A La Mode" — INVENTED person + role.
+- "10,000+ businesses worldwide" — INVENTED stat formatted as a quote.
+- "Sarah Chen at Pink Cloud Studio" — INVENTED named person and INVENTED named business.
+- Quotation marks wrapping fabricated taglines — these create the false impression of direct citation.
+
+The right move when the scrape SHOWS that testimonials exist but doesn't give you specific names/stats you can cite:
+- "the wall of testimonials with real business names attached makes the headline feel earned" ✅
+- "the rating badge sitting next to actual customer feedback adds weight to the positioning claim" ✅
+- "as a first-time visitor it's still hard to tell which subscription tier the most-quoted use cases sit on" ✅ (gap, not invented detail)
+
+Same angle, no fabrication. The email stays specific to the page without inventing anything.
+
+---
+
 ## QUALITY CHECKLIST — verify before outputting:
 
 1. Does opening_line describe what the company does in natural language? Not a database label like "top-tier" or "Unknown"?
@@ -430,6 +489,13 @@ labs22.com
 16. Does specific_observation contain an em-dash ("—") used as a mid-sentence aside or qualifier clause? If yes, REWRITE as two shorter sentences. Example: replace "it's not clear who the site is speaking to — whether that's owners, managers, or contractors — and without that, it's hard to tell if it fits" with "it's not clear who the site is speaking to. Owners, managers, and contractors would each approach the site differently, and without knowing which one it's built for, it's hard to tell if it fits." Em-dashes as sentence breaks make observations harder to read.
 17. Does specific_observation contain the word "but" as a connector? If yes, REWRITE. The template already says "I might be wrong, but" so any additional "but" inside the observation produces a double-but sentence. Reword using "despite", "even though", comma splices, or by splitting into two clauses without a second "but".
 18. Does opening_line use a different company name than what was provided in the input? If yes, REWRITE to use the input company name. The subject line pulls from the input, so any mismatch between subject and body looks careless. If the site's product has its own brand name, reference it as "[Company]'s [Product]" rather than replacing the company name entirely.
+
+GROUNDING SELF-CHECK (run this last, every time):
+19. List every named entity in your output (clients, partners, awards, stats, percentages, named people, product names, section names, quoted phrases). For each, can you find that EXACT string in the scrape? If even one cannot be found, REMOVE it and rewrite the surrounding sentence using a generic version.
+20. Did you wrap any phrase in single ('') or double ("") quotation marks within opening_line, specific_observation, design_compliment, or pointers? If yes, REMOVE the quotes and rephrase indirectly.
+21. Did you use any fact about this company that came from your training data rather than the scrape? If yes, REMOVE it. Sparse scrape → sparse email. That's the correct outcome.
+22. Did you reproduce or paraphrase what any testimonial actually says? If yes, REMOVE. You may say "the testimonials section is present" but never write what testimonials contain.
+23. Final gut-check: would Aryan be able to verify every specific claim in this email by reading the scrape? If no — rewrite until yes.
 
 ---
 

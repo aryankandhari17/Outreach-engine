@@ -78,10 +78,12 @@ const TIER_ORDER = ['strong', 'soft', 'compliment'];
 const TIER_LABELS = { strong: 'Strong Critique', soft: 'Soft Observation', compliment: 'Compliment' };
 const TIER_COLORS = { strong: '#EF4444', soft: '#F59E0B', compliment: '#10B981' };
 const BATCH_LEAD_DELAY_MS = 15000;
-const AI_MAX_CONTENT_CHARS = 3200;
+const AI_MAX_CONTENT_CHARS = 14000;
 const AI_MAX_429_RETRIES = 3;
 const AI_429_BASE_DELAY_MS = 15000;
 const AI_REPAIR_MAX_TOKENS = 1200;
+const AI_UNDERSTANDING_MAX_TOKENS = 1800;
+const AI_VERIFIER_MAX_TOKENS = 1200;
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -255,6 +257,220 @@ async function callClaudeWithBackoff({ model, apiKey, sysPrompt, userContent, ma
   return { ok: false, error: 'Rate limit retries exhausted' };
 }
 
+async function parseOrRepairJson({ rawText, model, apiKey, sysPrompt, label, maxTokens = AI_REPAIR_MAX_TOKENS }) {
+  let parsed = parseModelJson(rawText);
+  if (parsed) return parsed;
+
+  console.warn(`[OutreachEngine] Non-JSON model output for ${label}. Attempting repair pass.`);
+  const repairResponse = await callClaudeWithBackoff({
+    model,
+    apiKey,
+    sysPrompt,
+    userContent: `Your previous reply was not valid JSON.
+Return ONLY valid JSON.
+Do not add markdown, commentary, or code fences.
+Preserve the intended meaning as much as possible.
+
+Previous reply:
+${String(rawText || '').slice(0, 5000)}`,
+    maxTokens,
+    temperature: 0,
+    leadLabel: `${label} (JSON repair)`
+  });
+  if (!repairResponse || !repairResponse.ok) throw new Error(buildAiCallError(repairResponse));
+  parsed = parseModelJson(repairResponse?.data?.content?.[0]?.text || '');
+  return parsed;
+}
+
+function buildKnownLeadContext(lead) {
+  return [
+    lead.company && `Input company name: ${lead.company}`,
+    lead.industry && `Input industry: ${lead.industry}`,
+    lead.websiteURL && `Input website: ${lead.websiteURL}`,
+    lead.country && `Input country: ${lead.country}`
+  ].filter(Boolean).join('\n');
+}
+
+async function extractWebsiteUnderstanding({ model, apiKey, contentForAI, lead }) {
+  const leadContext = buildKnownLeadContext(lead);
+  const sysPrompt = `You are the fact-extraction layer for Labs22 OutreachEngine.
+
+Your only job is to understand the website accurately from the provided rendered scrape.
+Do NOT write email copy. Do NOT critique the site. Do NOT invent missing information.
+
+Use only the source text provided. If video, animation, canvas, or images are detected but not described in text, say they are detected but unreadable.
+
+Return ONLY valid JSON with this shape:
+{
+  "siteLoaded": true,
+  "enoughContent": true,
+  "companyNameFromSite": "name used on the website",
+  "companyDescription": "plain-English description of what the company does",
+  "siteType": "services / SaaS / hospitality / e-commerce / holding company / etc.",
+  "primaryAudiences": ["audience 1", "audience 2"],
+  "offerings": ["specific service/product/brand/property mentioned"],
+  "proofSignals": ["specific trust signal, client, property, award, number, region, credential"],
+  "nextSteps": ["visible button/link/action such as Contact, Book, Demo, Partner"],
+  "pagesReviewed": ["page labels or URLs visible in the scrape"],
+  "mediaAndAnimation": ["video/canvas/animation signals detected, without inventing video content"],
+  "clarity": {
+    "businessClear": true,
+    "audienceClear": true,
+    "nextStepClear": true,
+    "trustSignalsPresent": true
+  },
+  "evidence": [
+    { "fact": "one fact", "quote": "exact short source text that supports it" }
+  ],
+  "unknowns": ["only important things that are genuinely not answerable from the source"]
+}`;
+
+  const response = await callClaudeWithBackoff({
+    model,
+    apiKey,
+    sysPrompt,
+    userContent: `${leadContext ? `[KNOWN LEAD DATA]\n${leadContext}\n\n` : ''}[RENDERED WEBSITE SCRAPE]\n${contentForAI}`,
+    maxTokens: AI_UNDERSTANDING_MAX_TOKENS,
+    temperature: 0,
+    leadLabel: `${lead.company} (understanding)`
+  });
+  if (!response || !response.ok) throw new Error(buildAiCallError(response));
+  const parsed = await parseOrRepairJson({
+    rawText: response?.data?.content?.[0]?.text || '',
+    model,
+    apiKey,
+    sysPrompt,
+    label: `${lead.company} (understanding)`,
+    maxTokens: AI_UNDERSTANDING_MAX_TOKENS
+  });
+  if (!parsed) throw new Error('Understanding pass returned invalid JSON.');
+  return parsed;
+}
+
+function buildGroundedAnalysisPrompt(basePrompt, understanding) {
+  return `${basePrompt}
+
+---
+
+MANDATORY GROUNDING LAYER — OUTREACHENGINE SAFETY CHECK
+
+Before generating email fields, use the WEBSITE_UNDERSTANDING object from the user message as the source of truth.
+
+Hard rules:
+1. If WEBSITE_UNDERSTANDING.clarity.businessClear is true, you may NOT claim that a first-time visitor cannot tell what the company does.
+2. If WEBSITE_UNDERSTANDING.nextSteps contains real actions, you may NOT claim there is no next step. You may only say the next step could be more specific if that is genuinely supported.
+3. If WEBSITE_UNDERSTANDING.proofSignals contains proof, you may NOT claim there are no trust signals. You may only say a proof signal could be made clearer or connected to an outcome.
+4. Multi-audience B2B sites are not automatically unclear. Owners, investors, developers, advertisers, publishers, buyers, and partners can all be valid audiences. Treat audience segmentation as a soft refinement unless the source truly leaves the business impossible to understand.
+5. Absence claims are high risk. Avoid phrases like "no", "nothing", "doesn't explain", "no visible", "no property listing", "no trust signals", or "no next step" unless the understanding pass proves that absence.
+6. Strong tier is only allowed when a visitor genuinely cannot understand the business, cannot proceed, or the site is too thin/broken. If the company is understandable and the issue is sharper audience focus, proof framing, or clearer process, use soft or compliment.
+7. If your planned critique contradicts any extracted evidence, downgrade and rewrite.
+8. Do not mention visual design quality unless the source text explicitly describes it.
+9. Presence is not strength. A Contact button, testimonial, award, logo strip, or product list can exist and still be weak, buried, cluttered, unexplained, or not persuasive.
+10. Compliment tier is only allowed when positioning, trust, and conversion are ALL strong. For UI/UX, all three pillar scores must be 4 or 5. If one pillar is 3 or lower, use soft even if another pillar has excellent proof.
+11. Do not let one good trust marker rescue the whole website. If the site has an award/testimonial/client logo but the proposition is broad, cluttered, dated, hard to scan, or the buyer path is weak, route to soft and write a neutral observation.
+12. Be neutral, not flattering. Compliment only when the overall website experience is genuinely strong, not merely because you found something positive.
+
+WEBSITE_UNDERSTANDING:
+${JSON.stringify(understanding, null, 2)}
+`;
+}
+
+async function verifyAnalysisAgainstUnderstanding({ model, apiKey, lead, understanding, analysis }) {
+  const sysPrompt = `You are the final QA judge for Labs22 OutreachEngine.
+
+Your job is to prevent confident wrong outreach.
+Compare the generated analysis against WEBSITE_UNDERSTANDING.
+
+Reject or downgrade if:
+- it says the company/business is unclear even though businessClear is true
+- it says no next step exists even though nextSteps has actions
+- it says no trust/proof exists even though proofSignals has proof
+- it uses unsupported absence claims
+- it routes strong for a soft refinement
+- it routes compliment when one pillar is weak, cluttered, broad, dated, or hard to scan
+- it treats one good proof signal, award, testimonial, logo strip, or stat as enough for a compliment
+- it praises the site when the fair answer is "credible business, weak presentation"
+- it makes visual claims not supported by text
+- it invents names, stats, properties, awards, clients, or outcomes
+
+Return ONLY valid JSON:
+{
+  "approved": true,
+  "safeEmailTier": "strong",
+  "problems": [],
+  "repairInstructions": "short instructions if approved is false"
+}`;
+
+  const response = await callClaudeWithBackoff({
+    model,
+    apiKey,
+    sysPrompt,
+    userContent: `[KNOWN LEAD DATA]\n${buildKnownLeadContext(lead)}\n\n[WEBSITE_UNDERSTANDING]\n${JSON.stringify(understanding, null, 2)}\n\n[GENERATED_ANALYSIS]\n${JSON.stringify(analysis, null, 2)}`,
+    maxTokens: AI_VERIFIER_MAX_TOKENS,
+    temperature: 0,
+    leadLabel: `${lead.company} (verifier)`
+  });
+  if (!response || !response.ok) throw new Error(buildAiCallError(response));
+  const parsed = await parseOrRepairJson({
+    rawText: response?.data?.content?.[0]?.text || '',
+    model,
+    apiKey,
+    sysPrompt,
+    label: `${lead.company} (verifier)`,
+    maxTokens: AI_VERIFIER_MAX_TOKENS
+  });
+  if (!parsed) throw new Error('Verifier returned invalid JSON.');
+  return parsed;
+}
+
+function findDeterministicSafetyProblems(understanding, analysis) {
+  const problems = [];
+  const text = [
+    analysis?.visitorReaction,
+    analysis?.opening_line,
+    analysis?.specific_observation,
+    analysis?.brand_observation,
+    analysis?.design_compliment,
+    analysis?.brand_compliment,
+    ...(Array.isArray(analysis?.pointers) ? analysis.pointers : []),
+    ...(Array.isArray(analysis?.what_works) ? analysis.what_works.map(w => typeof w === 'string' ? w : w?.observation || '') : [])
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  const clarity = understanding?.clarity || {};
+  const nextSteps = Array.isArray(understanding?.nextSteps) ? understanding.nextSteps.filter(Boolean) : [];
+  const proofSignals = Array.isArray(understanding?.proofSignals) ? understanding.proofSignals.filter(Boolean) : [];
+  const pillarScores = analysis?.pillars ? [
+    analysis.pillars.positioning?.score,
+    analysis.pillars.trust?.score,
+    analysis.pillars.conversion?.score
+  ].map(s => parseInt(s)).filter(s => !isNaN(s)) : [];
+
+  if (clarity.businessClear === true && /(can't|cannot|couldn't|could not|not possible|not clear|unclear|hard to understand|hard to tell).{0,80}(what|actually).{0,40}(does|do|is|are)/i.test(text)) {
+    problems.push('The analysis claims the business is unclear, but the understanding pass says the business is clear.');
+  }
+  if (nextSteps.length > 0 && /(no|without|lack of|missing).{0,40}(next step|cta|call to action|contact|booking|demo|enquiry|inquiry|path forward)/i.test(text)) {
+    problems.push('The analysis claims there is no next step, but the understanding pass found visible next steps.');
+  }
+  if (proofSignals.length > 0 && /(no|nothing|without|lack of|missing).{0,50}(proof|trust signal|credibility|client|customer|review|award|property|portfolio|case stud)/i.test(text)) {
+    problems.push('The analysis claims proof or trust is missing, but the understanding pass found proof signals.');
+  }
+  if (analysis?.emailTier === 'strong' && clarity.businessClear === true && clarity.nextStepClear === true && proofSignals.length > 0) {
+    problems.push('Strong tier is too harsh because the business is clear, next steps exist, and proof signals are present.');
+  }
+  if (analysis?.emailTier === 'compliment') {
+    if (pillarScores.length === 3 && pillarScores.some(score => score < 4)) {
+      problems.push('Compliment tier is too positive because at least one pillar score is below 4.');
+    }
+    if (clarity.businessClear === false || clarity.audienceClear === false || clarity.nextStepClear === false || clarity.trustSignalsPresent === false) {
+      problems.push('Compliment tier is too positive because the understanding pass did not mark all clarity/trust/next-step checks as strong enough.');
+    }
+    if (/(award|testimonial|client logo|logo strip|recognition|partner|rating|review)/i.test(text) && pillarScores.length !== 3) {
+      problems.push('Compliment tier appears to rely on a proof signal without scoring positioning, trust, and conversion independently.');
+    }
+  }
+  return problems;
+}
+
 // Personal tab state — isolated from all other lead data
 let personalLeads = [];
 let currentPersonalLead = null;
@@ -284,41 +500,91 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCampaignRegistry();
   applySidebarState();
 
-  // Column resize — drag the right edge of any th.resizable-col
+  // Column resize — fluid layout: columns scale to fill viewport, resize redistributes proportionally
   const COL_WIDTHS_KEY = 'leadsTableColWidths';
-  const savedWidths = (() => { try { return JSON.parse(localStorage.getItem(COL_WIDTHS_KEY) || '{}'); } catch(e) { return {}; } })();
+  const COL_DEFAULTS = { name: 110, company: 100, industry: 120, country: 80, website: 140, status: 90, scores: 110, actions: 160 };
+  const ICON_COL_PX = 30;
+  const leadsTableEl = document.getElementById('leadsTable');
+  // intended[col] = the user's desired width in "logical" px (sum of these = baseline)
+  const intended = (() => {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(COL_WIDTHS_KEY) || '{}'); } catch(e) {}
+    return Object.assign({}, COL_DEFAULTS, saved);
+  })();
+
+  const getResizableThs = () => [...document.querySelectorAll('#leadsTable thead th.resizable-col')];
+  const intendedSum = () => getResizableThs().reduce((s, th) => s + (intended[th.dataset.col] || 100), 0);
+  const containerInnerW = () => {
+    if (!leadsTableEl || !leadsTableEl.parentElement) return 0;
+    return leadsTableEl.parentElement.clientWidth - ICON_COL_PX;
+  };
+  const currentScale = () => {
+    const sum = intendedSum();
+    const cw = containerInnerW();
+    return (cw > 0 && sum > 0 && sum < cw) ? (cw / sum) : 1;
+  };
+
   const applyColWidths = () => {
-    document.querySelectorAll('#leadsTable th.resizable-col').forEach(th => {
-      const col = th.dataset.col;
-      if (savedWidths[col]) th.style.width = savedWidths[col] + 'px';
+    if (!leadsTableEl) return;
+    const scale = currentScale();
+    const ths = getResizableThs();
+    ths.forEach(th => {
+      const w = (intended[th.dataset.col] || 100) * scale;
+      th.style.width = w + 'px';
     });
+    const renderedSum = intendedSum() * scale;
+    const targetTableW = Math.max(renderedSum + ICON_COL_PX, containerInnerW() + ICON_COL_PX);
+    leadsTableEl.style.width = targetTableW + 'px';
   };
   applyColWidths();
+  window.addEventListener('resize', applyColWidths);
 
-  document.querySelectorAll('#leadsTable th.resizable-col').forEach(th => {
-    let startX, startW;
-    const onMouseMove = (e) => {
-      const newW = Math.max(60, startW + (e.clientX - startX));
-      th.style.width = newW + 'px';
+  const RESIZE_ZONE_PX = 12;
+  getResizableThs().forEach(th => {
+    let startX = 0, startIntended = 0, startScale = 1, dragging = false;
+    const inResizeZone = (e) => {
+      const rect = th.getBoundingClientRect();
+      return e.clientX >= rect.right - RESIZE_ZONE_PX && e.clientX <= rect.right;
     };
-    const onMouseUp = (e) => {
+    th.addEventListener('mousemove', (e) => {
+      if (dragging) return;
+      th.style.cursor = inResizeZone(e) ? 'col-resize' : '';
+    });
+    th.addEventListener('mouseleave', () => { if (!dragging) th.style.cursor = ''; });
+    const onDocMove = (e) => {
+      if (!dragging) return;
+      // delta in rendered px → convert to intended px via startScale
+      const deltaRendered = e.clientX - startX;
+      const deltaIntended = deltaRendered / startScale;
       const col = th.dataset.col;
-      savedWidths[col] = Math.max(60, startW + (e.clientX - startX));
-      localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(savedWidths));
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
+      intended[col] = Math.max(60, startIntended + deltaIntended);
+      applyColWidths();
+    };
+    const onDocUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      const persisted = {};
+      Object.keys(COL_DEFAULTS).forEach(k => { persisted[k] = intended[k]; });
+      localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(persisted));
+      document.removeEventListener('mousemove', onDocMove);
+      document.removeEventListener('mouseup', onDocUp);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      th.classList.remove('col-resizing');
     };
     th.addEventListener('mousedown', (e) => {
-      const rect = th.getBoundingClientRect();
-      if (e.clientX < rect.right - 6) return; // only trigger on right 6px
+      if (!inResizeZone(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dragging = true;
       startX = e.clientX;
-      startW = th.offsetWidth;
+      startIntended = intended[th.dataset.col] || 100;
+      startScale = currentScale();
+      th.classList.add('col-resizing');
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
+      document.addEventListener('mousemove', onDocMove);
+      document.addEventListener('mouseup', onDocUp);
     });
   });
 
@@ -741,6 +1007,10 @@ async function initApp() {
   safeSetValue('brandingSenderWeb', localStorage.getItem('brandingSenderWeb') || 'labs22.com');
   safeSetChecked('brandingEnoc', localStorage.getItem('brandingEnoc') !== 'false');
 
+  safeSetValue('personalSenderName', localStorage.getItem('personalSenderName') || '');
+  safeSetValue('personalSenderTitle', localStorage.getItem('personalSenderTitle') || 'Partner, Labs22');
+  safeSetValue('personalSenderWeb', localStorage.getItem('personalSenderWeb') || 'labs22.com');
+
   // Prompts: always use the code constants directly. No localStorage caching.
   activeUiuxPrompt = DEFAULT_PROMPT;
   activeBrandingPrompt = BRANDING_PROMPT;
@@ -777,8 +1047,8 @@ async function initApp() {
 }
 
 // Settings tab IDs — defined at top level so activateSettingsTab is globally accessible
-const _setTabs = ['setTabGeneral', 'setTabUiux', 'setTabBranding'];
-const _setPanes = ['settingsGeneral', 'settingsSenderUiux', 'settingsSenderBranding'];
+const _setTabs = ['setTabGeneral', 'setTabUiux', 'setTabBranding', 'setTabPersonal'];
+const _setPanes = ['settingsGeneral', 'settingsSenderUiux', 'settingsSenderBranding', 'settingsSenderPersonal'];
 
 function activateSettingsTab(idx) {
   _setTabs.forEach((id, i) => {
@@ -951,7 +1221,7 @@ function renderTable() {
                  <button class="export-inline-btn outline-btn" style="padding:4px 12px; font-size:11px; height:28px; border-color:var(--accent); color:var(--accent);">Export</button>`
           }
           ${l.status === 'Processing' ? '' : `<button class="more-btn" style="background:transparent; border:none; color:var(--text-70); font-size:18px; cursor:pointer; padding:0 4px;">⋮</button>`}
-          <div class="more-dropdown" style="display:none; position:absolute; right:12px; top:28px; background:var(--bg); border:1px solid var(--border); border-radius:6px; z-index:100; padding:4px; min-width:120px; flex-direction:column; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+          <div class="more-dropdown" style="display:none; position:fixed; background:var(--bg); border:1px solid var(--border); border-radius:6px; z-index:9999; padding:4px; min-width:120px; flex-direction:column; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
             <button class="reprocess-dropdown-btn" style="background:transparent; color:var(--text-95); border:none; padding:8px 12px; text-align:left; font-size:11px; width:100%; cursor:pointer;">Reprocess</button>
             <button class="delete-dropdown-btn" style="background:transparent; color:#EF4444; border:none; padding:8px 12px; text-align:left; font-size:11px; width:100%; cursor:pointer; border-top:1px solid var(--border); margin-top:4px;">Delete</button>
           </div>
@@ -978,6 +1248,7 @@ function renderTable() {
       tr.querySelector('.process-inline-btn').onclick = async (e) => {
         e.stopPropagation();
         if (l.status === 'Processing') return;
+        cancelProcessing = false;
         l.status = 'Processing';
         renderTable();
         await processLead(l);
@@ -999,8 +1270,19 @@ function renderTable() {
     if (moreBtn) {
       moreBtn.onclick = (e) => {
         e.stopPropagation();
-        document.querySelectorAll('.more-dropdown').forEach(d => { if(d!==dropdown) d.style.display='none'; });
-        dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+        document.querySelectorAll('.more-dropdown').forEach(d => {
+          if (d !== dropdown) d.style.display = 'none';
+        });
+        const opening = dropdown.style.display !== 'flex';
+        if (opening) {
+          const rect = moreBtn.getBoundingClientRect();
+          dropdown.style.top = (rect.bottom + 4) + 'px';
+          dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+          dropdown.style.left = 'auto';
+          dropdown.style.display = 'flex';
+        } else {
+          dropdown.style.display = 'none';
+        }
       };
     }
 
@@ -1008,6 +1290,7 @@ function renderTable() {
     reprocessBtn.onclick = (e) => {
       e.stopPropagation(); dropdown.style.display='none';
       if (l.status === 'Processing') return;
+      cancelProcessing = false;
       l.status = 'Queued'; l.analysis = null; l.sequence = null;
       renderTable(); 
     };
@@ -1246,6 +1529,9 @@ function openLeadDetail(lead) {
   document.getElementById('detailWebsiteText').innerText = (lead.websiteURL || '').toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
   document.getElementById('detailStatusText').innerText = lead.status;
   document.getElementById('detailStatusBadge').className = `status-${lead.status.toLowerCase()}`;
+  // Show View Scrape button only if a scrape was captured (added in v1.0.8 — older leads won't have it until reprocessed)
+  const viewScrapeBtn = document.getElementById('viewScrapeBtn');
+  if (viewScrapeBtn) viewScrapeBtn.style.display = lead.scrapedContentForAI ? 'inline-block' : 'none';
   
   // Reset to Analysis tab
   document.getElementById('analysisContent').style.display = 'block';
@@ -1414,6 +1700,14 @@ function getSenderVars(mode) {
       enoc: localStorage.getItem('brandingEnoc') !== 'false'
     };
   }
+  if (mode === 'personal') {
+    return {
+      name: localStorage.getItem('personalSenderName') || '',
+      title: localStorage.getItem('personalSenderTitle') || 'Partner, Labs22',
+      web: localStorage.getItem('personalSenderWeb') || 'labs22.com',
+      enoc: false
+    };
+  }
   return {
     name: localStorage.getItem('uiuxSenderName') || 'Aryan',
     title: localStorage.getItem('uiuxSenderTitle') || 'Partner, Labs22',
@@ -1422,11 +1716,16 @@ function getSenderVars(mode) {
   };
 }
 
+function getPersonalSignature() {
+  const s = getSenderVars('personal');
+  return [s.name, s.title, s.web].filter(Boolean).join('\n');
+}
+
 function generateSequences(lead) {
   const s = getSenderVars(lead.mode);
   const a = lead.analysis;
   const firstName = lead.firstName || 'there';
-  const company = lead.company || '';
+  const company = (lead.company || '').split(/\s+[-–—|]\s+/)[0].trim();
   const opening = a.opening_line || `I came across ${company}`;
   const tier = a.emailTier || 'strong';
   const isBranding = lead.mode === 'branding';
@@ -1503,57 +1802,27 @@ async function processLead(lead) {
       return;
     }
 
-    // Detect JS-rendered (SPA) sites: scraper returned content but meaningful text is thin.
-    // SPA indicators: __NEXT_DATA__, id="root", id="__next", very short readable text, etc.
-    const metaLineRe = /^(Title:|OG Title:|Site Name:|Description:|Structured Data:)/m;
-    const bodyEstimate = scraped.split('\n').filter(l => !metaLineRe.test(l)).join(' ')
-      .replace(/\{[\s\S]{50,}\}/g, '')  // strip large JSON blobs (__NEXT_DATA__, ld+json leftovers)
-      .replace(/\s+/g, ' ').trim();
-    const isSPA = bodyEstimate.length < 400
-      || /__(NEXT|NUXT)_DATA__|id=["'](root|app|__next)["']/.test(scraped)
-      || (scraped.length > 200 && bodyEstimate.split(/\s+/).length < 30);  // lots of bytes but < 30 real words
     let contentForAI = scraped;
-    console.log('[OutreachEngine] Scrape debug:', lead.company, '| raw:', scraped.length, 'chars | body estimate:', bodyEstimate.length, 'chars /', bodyEstimate.split(/\s+/).length, 'words | SPA detected:', isSPA);
-
-    if (isSPA) {
-      // Try /about for additional static content
-      try {
-        const base = new URL(lead.websiteURL.startsWith('http') ? lead.websiteURL : 'https://' + lead.websiteURL);
-        const aboutScraped = await window.electronAPI.scrapeWebsite(base.origin + '/about');
-        if (aboutScraped && aboutScraped.trim().length > 100) {
-          contentForAI = scraped + '\n\n--- /about page ---\n\n' + aboutScraped;
-        }
-      } catch(e) { /* /about doesn't exist or timed out — continue with what we have */ }
-
-      // Prepend a hard override note + known lead fields so the AI has enough to work with
-      const leadContext = [
-        lead.company   && `Company name: ${lead.company}`,
-        lead.industry  && `Industry: ${lead.industry}`,
-        lead.websiteURL && `Domain: ${lead.websiteURL}`
-      ].filter(Boolean).join('\n');
-
-      contentForAI = `[SCRAPER NOTE — MANDATORY OVERRIDE: This site uses client-side JavaScript rendering. ` +
-        `The text below is sparse because the scraper can only read static HTML — the actual site content loads via JavaScript. ` +
-        `This is a technical scraper limitation, NOT evidence of a thin or empty site. ` +
-        `RULE: You are FORBIDDEN from returning emailTier "skip" for this lead. ` +
-        `RULE: You are FORBIDDEN from applying STEP 1.5 (thin site check). ` +
-        `RULE: If the scraped text is too sparse for full analysis, use the company name and domain below to form your best judgment and assign emailTier "soft". ` +
-        `Only return siteLoaded: false if the content explicitly says "domain not found", "404", or "coming soon".]\n\n` +
-        (leadContext ? `[KNOWN LEAD DATA]\n${leadContext}\n\n` : '') +
-        contentForAI;
-    }
+    console.log('[OutreachEngine] Scrape debug:', lead.company, '| rendered scrape:', scraped.length, 'chars');
 
     const originalContentLength = contentForAI.length;
     contentForAI = trimAiContent(contentForAI);
     if (contentForAI.length < originalContentLength) {
       console.log(`[OutreachEngine] Trimmed AI payload for ${lead.company} from ${originalContentLength} to ${contentForAI.length} chars.`);
     }
+    // Persist the exact scrape the AI saw — used by the View Scrape button for manual hallucination spot-checks
+    lead.scrapedContentForAI = contentForAI;
+
+    const understanding = await extractWebsiteUnderstanding({ model, apiKey, contentForAI, lead });
+    if (lead.status !== 'Processing') return;
+    lead.websiteUnderstanding = understanding;
+    console.log('[OutreachEngine] Understanding for', lead.company, '→ businessClear:', understanding?.clarity?.businessClear, '| nextStepClear:', understanding?.clarity?.nextStepClear);
 
     const response = await callClaudeWithBackoff({
       model,
       apiKey,
-      sysPrompt,
-      userContent: `Analyze this website and return ONLY valid JSON:\n\n${contentForAI}`,
+      sysPrompt: buildGroundedAnalysisPrompt(sysPrompt, understanding),
+      userContent: `Analyze this website and return ONLY valid JSON. First respect WEBSITE_UNDERSTANDING, then use the rendered source text below for any additional grounding.\n\n[KNOWN LEAD DATA]\n${buildKnownLeadContext(lead)}\n\n[RENDERED WEBSITE SCRAPE]\n${contentForAI}`,
       maxTokens: 4096,
       temperature: 0.2,
       leadLabel: lead.company
@@ -1563,23 +1832,64 @@ async function processLead(lead) {
     if (!response || !response.ok) throw new Error(buildAiCallError(response));
 
     let rawResult = response?.data?.content?.[0]?.text || '';
-    let parsed = parseModelJson(rawResult);
-    if (!parsed) {
-      console.warn(`[OutreachEngine] Non-JSON model output for ${lead.company}. Attempting repair pass.`);
-      const repairResponse = await callClaudeWithBackoff({
+    let parsed = await parseOrRepairJson({
+      rawText: rawResult,
+      model,
+      apiKey,
+      sysPrompt: buildGroundedAnalysisPrompt(sysPrompt, understanding),
+      label: `${lead.company} (analysis)`,
+      maxTokens: AI_REPAIR_MAX_TOKENS
+    });
+    if (!parsed) throw new Error('Model returned invalid JSON after one repair pass.');
+
+    const verifier = await verifyAnalysisAgainstUnderstanding({ model, apiKey, lead, understanding, analysis: parsed });
+    if (lead.status !== 'Processing') return;
+    lead.analysisVerifier = verifier;
+    const deterministicProblems = findDeterministicSafetyProblems(understanding, parsed);
+    if (!verifier.approved || deterministicProblems.length > 0) {
+      const repairNotes = [
+        verifier.repairInstructions,
+        ...(Array.isArray(verifier.problems) ? verifier.problems : []),
+        ...deterministicProblems
+      ].filter(Boolean);
+      console.warn(`[OutreachEngine] Verifier rejected ${lead.company}. Regenerating with safer instructions:`, repairNotes);
+      const retryResponse = await callClaudeWithBackoff({
         model,
         apiKey,
-        sysPrompt,
-        userContent: `Your previous reply was not valid JSON.\nReturn ONLY valid JSON using the exact required field names.\nDo not add markdown, commentary, or code fences.\n\nPrevious reply:\n${String(rawResult).slice(0, 5000)}`,
-        maxTokens: AI_REPAIR_MAX_TOKENS,
+        sysPrompt: buildGroundedAnalysisPrompt(sysPrompt, understanding),
+        userContent: `The previous analysis was rejected by QA because it may be unfair or unsupported.
+
+Repair instructions:
+${repairNotes.join('\n')}
+
+Safe emailTier recommended by QA: ${deterministicProblems.length > 0 ? 'soft or compliment' : (verifier.safeEmailTier || 'soft')}
+
+Return ONLY a corrected valid JSON analysis using the exact required field names.
+Do not make unsupported absence claims. Do not contradict WEBSITE_UNDERSTANDING.
+
+[KNOWN LEAD DATA]
+${buildKnownLeadContext(lead)}
+
+[WEBSITE_UNDERSTANDING]
+${JSON.stringify(understanding, null, 2)}
+
+[RENDERED WEBSITE SCRAPE]
+${contentForAI}`,
+        maxTokens: 4096,
         temperature: 0,
-        leadLabel: `${lead.company} (repair)`
+        leadLabel: `${lead.company} (safe rewrite)`
       });
-      if (!repairResponse || !repairResponse.ok) throw new Error(buildAiCallError(repairResponse));
-      rawResult = repairResponse?.data?.content?.[0]?.text || '';
-      parsed = parseModelJson(rawResult);
+      if (!retryResponse || !retryResponse.ok) throw new Error(buildAiCallError(retryResponse));
+      const retryParsed = parseModelJson(retryResponse?.data?.content?.[0]?.text || '');
+      if (!retryParsed) throw new Error('Safe rewrite returned invalid JSON.');
+      parsed = retryParsed;
+      if (verifier.safeEmailTier && parsed.emailTier === 'strong' && verifier.safeEmailTier !== 'strong') {
+        parsed.emailTier = verifier.safeEmailTier;
+      }
+      if (deterministicProblems.length > 0 && parsed.emailTier === 'strong') {
+        parsed.emailTier = 'soft';
+      }
     }
-    if (!parsed) throw new Error('Model returned invalid JSON after one repair pass.');
 
     lead.analysis = parsed;
     // Strip em-dashes from AI-generated text fields — guaranteed regardless of prompt compliance
@@ -1642,6 +1952,10 @@ document.getElementById('settingsBtn').onclick = () => {
     safeSetValue('brandingSenderWeb', localStorage.getItem('brandingSenderWeb') || '');
     safeSetChecked('brandingEnoc', localStorage.getItem('brandingEnoc') !== 'false');
 
+    safeSetValue('personalSenderName', localStorage.getItem('personalSenderName') || '');
+    safeSetValue('personalSenderTitle', localStorage.getItem('personalSenderTitle') || '');
+    safeSetValue('personalSenderWeb', localStorage.getItem('personalSenderWeb') || '');
+
     safeSetValue('uiuxPromptArea', activeUiuxPrompt);
     safeSetValue('brandingPromptArea', activeBrandingPrompt);
 
@@ -1689,6 +2003,10 @@ document.getElementById('closeSettingsBtn').onclick = () => {
   safeSave('brandingSenderTitle', 'brandingSenderTitle');
   safeSave('brandingSenderWeb', 'brandingSenderWeb');
   safeSaveCheck('brandingEnoc', 'brandingEnoc');
+
+  safeSave('personalSenderName', 'personalSenderName');
+  safeSave('personalSenderTitle', 'personalSenderTitle');
+  safeSave('personalSenderWeb', 'personalSenderWeb');
 
   // Update in-memory prompts from textarea edits (used immediately by processLead)
   const uiuxPrompt = safeGetValue('uiuxPromptArea');
@@ -1750,6 +2068,58 @@ document.getElementById('tabAddSingle').onclick = () => {
 };
 
 document.getElementById('backFromDetailBtn').onclick = () => { document.getElementById('leadDetailView').style.display='none'; document.getElementById('dashboardSections').style.display='flex'; };
+
+// View Scrape modal — lets the user verify the email is grounded in the scraped page text
+(function setupScrapeModal() {
+  const modal = document.getElementById('scrapeModal');
+  const viewBtn = document.getElementById('viewScrapeBtn');
+  const closeBtn = document.getElementById('closeScrapeModalBtn');
+  const contentEl = document.getElementById('scrapeContent');
+  const searchInput = document.getElementById('scrapeSearchInput');
+  const searchCount = document.getElementById('scrapeSearchCount');
+  const subtitle = document.getElementById('scrapeModalSubtitle');
+  if (!modal || !viewBtn || !closeBtn || !contentEl) return;
+
+  let rawScrape = '';
+
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const renderScrape = (query) => {
+    const safe = escapeHtml(rawScrape);
+    if (!query || query.trim().length < 2) {
+      contentEl.innerHTML = safe;
+      searchCount.innerText = '0 matches';
+      return;
+    }
+    const re = new RegExp(escapeRegex(query.trim()), 'gi');
+    let count = 0;
+    const highlighted = safe.replace(re, (m) => { count++; return `<mark style="background:var(--accent); color:var(--bg); padding:0 2px; border-radius:2px;">${m}</mark>`; });
+    contentEl.innerHTML = highlighted;
+    searchCount.innerText = count + ' match' + (count === 1 ? '' : 'es');
+  };
+
+  viewBtn.onclick = () => {
+    if (!currentLeadInDetail) return;
+    rawScrape = currentLeadInDetail.scrapedContentForAI || '';
+    if (!rawScrape) {
+      rawScrape = '(No scrape stored for this lead. Reprocess the lead to capture the scrape for verification.)';
+    }
+    if (subtitle) {
+      const charCount = rawScrape.length.toLocaleString();
+      subtitle.innerText = `What the AI saw — ${charCount} chars. Use this to verify every named entity, stat, and quote in the email is grounded in the page text.`;
+    }
+    searchInput.value = '';
+    renderScrape('');
+    modal.style.display = 'flex';
+  };
+  closeBtn.onclick = () => { modal.style.display = 'none'; };
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+  searchInput.addEventListener('input', (e) => renderScrape(e.target.value));
+  document.addEventListener('keydown', (e) => {
+    if (modal.style.display === 'flex' && e.key === 'Escape') modal.style.display = 'none';
+  });
+})();
 
 document.getElementById('tabAnalysis').onclick = () => {
   document.getElementById('analysisContent').style.display = 'block';
@@ -2112,6 +2482,10 @@ document.addEventListener('click', () => {
   document.querySelectorAll('.campaign-menu-dropdown').forEach(d => d.style.display = 'none');
 });
 
+document.addEventListener('scroll', (e) => {
+  document.querySelectorAll('.more-dropdown').forEach(d => d.style.display = 'none');
+}, true);
+
 // ============================================================
 // PERSONAL TAB — All logic below is fully isolated
 // ============================================================
@@ -2197,6 +2571,33 @@ function openPersonalLeadDetail(lead) {
 
   renderPersonalEmailComposers();
 
+  // Signature toggle
+  const sigToggle = document.getElementById('pdSignatureToggle');
+  const sigStatus = document.getElementById('pdSignatureStatus');
+  const sigPreview = document.getElementById('pdSignaturePreview');
+  const sigEnabled = localStorage.getItem('personalSignatureEnabled') === 'true';
+  sigToggle.checked = sigEnabled;
+  sigStatus.innerText = sigEnabled ? 'On' : 'Off';
+  const sig = getPersonalSignature();
+  if (sigEnabled && sig) {
+    sigPreview.innerText = sig;
+    sigPreview.style.display = 'block';
+  } else {
+    sigPreview.style.display = 'none';
+  }
+  sigToggle.onchange = () => {
+    const on = sigToggle.checked;
+    localStorage.setItem('personalSignatureEnabled', on ? 'true' : 'false');
+    sigStatus.innerText = on ? 'On' : 'Off';
+    const s = getPersonalSignature();
+    if (on && s) {
+      sigPreview.innerText = s;
+      sigPreview.style.display = 'block';
+    } else {
+      sigPreview.style.display = 'none';
+    }
+  };
+
   // Website context section
   if (lead.websiteContext) {
     document.getElementById('pdWebsiteContext').innerText = lead.websiteContext;
@@ -2260,6 +2661,18 @@ function renderPersonalEmailComposers() {
     const subjEl = block.querySelector('.pd-subj');
     const bodyEl = block.querySelector('.pd-body');
     subjEl.value = email.subject || '';
+
+    // Auto-fill greeting if body is empty
+    if (!email.body) {
+      const fullName = (currentPersonalLead.contactName || '').trim();
+      const firstName = fullName ? fullName.split(/\s+/)[0] : '';
+      const greeting = firstName ? `Hi ${firstName},\n\n` : '';
+      if (greeting) {
+        email.body = greeting;
+        currentPersonalLead.emails[i].body = greeting;
+        savePersonalLeads();
+      }
+    }
     bodyEl.value = email.body || '';
 
     // Save on input
@@ -2605,11 +3018,15 @@ document.getElementById('exportPersonalBtn').onclick = async () => {
   const emailHeaders = [];
   for (let i = 1; i <= maxEmails; i++) emailHeaders.push(`E${i} Subject`, `E${i} Body`);
   let csv = ['Company', 'Contact Name', 'Contact Email', 'Website', 'Relationship', 'Campaign', 'Status', ...emailHeaders].join(',') + '\n';
+  const appendSig = localStorage.getItem('personalSignatureEnabled') === 'true';
+  const exportSig = appendSig ? getPersonalSignature() : '';
   exportable.forEach(l => {
     const row = [esc(l.company), esc(l.contactName), esc(l.contactEmail), esc(l.website), esc(l.relationship), esc(l.campaign || 'Personal'), esc(l.status)];
     for (let i = 0; i < maxEmails; i++) {
       const em = (l.emails || [])[i] || { subject: '', body: '' };
-      row.push(esc(em.subject), esc(em.body));
+      const body = (em.body || '');
+      const exportBody = (appendSig && exportSig && body.trim()) ? `${body}\n\n${exportSig}` : body;
+      row.push(esc(em.subject), esc(exportBody));
     }
     csv += row.join(',') + '\n';
   });

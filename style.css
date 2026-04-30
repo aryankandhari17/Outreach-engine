@@ -297,7 +297,7 @@ main {
 
 .table-container {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
@@ -310,6 +310,7 @@ table {
 
 #leadsTable {
   table-layout: fixed;
+  width: 100%;
 }
 
 th, td {
@@ -321,7 +322,6 @@ th, td {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 0;
 }
 
 th:last-child, td:last-child {
@@ -345,24 +345,12 @@ th {
 }
 
 th.resizable-col {
-  position: relative;
-  overflow: hidden;
+  background-image: linear-gradient(to right, transparent calc(100% - 3px), rgba(255,255,255,0.12) calc(100% - 3px), rgba(255,255,255,0.12) calc(100% - 1px), transparent calc(100% - 1px));
 }
 
-th.resizable-col::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 20%;
-  height: 60%;
-  width: 3px;
-  background: rgba(255,255,255,0.12);
-  border-radius: 2px;
-  cursor: col-resize;
-}
-
-th.resizable-col:hover::after {
-  background: var(--accent);
+th.resizable-col.col-resizing,
+th.resizable-col:hover {
+  background-image: linear-gradient(to right, transparent calc(100% - 3px), var(--accent) calc(100% - 3px), var(--accent) calc(100% - 1px), transparent calc(100% - 1px));
 }
 
 tr:hover {
