@@ -532,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Column resize — fluid layout: columns scale to fill viewport, resize redistributes proportionally
   const COL_WIDTHS_KEY = 'leadsTableColWidths';
-  const COL_DEFAULTS = { name: 110, company: 100, industry: 120, country: 80, website: 140, status: 90, scores: 110, actions: 160 };
+  const COL_DEFAULTS = { name: 110, jobrole: 100, assignedrole: 110, company: 100, industry: 120, country: 80, website: 140, status: 90, scores: 110, actions: 160 };
   const ICON_COL_PX = 30;
   const leadsTableEl = document.getElementById('leadsTable');
   // intended[col] = the user's desired width in "logical" px (sum of these = baseline)
@@ -615,6 +615,64 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.style.userSelect = 'none';
       document.addEventListener('mousemove', onDocMove);
       document.addEventListener('mouseup', onDocUp);
+    });
+  });
+
+  // ── Personal table column resize ───────────────────────────────────────────
+  const PERS_COL_WIDTHS_KEY = 'personalTableColWidths';
+  const PERS_COL_DEFAULTS = { company:130, contactname:140, role:90, assignedrole:130, email:180, relationship:200, website:100, status:110 };
+  const persTableEl = document.getElementById('personalTable');
+  const persIntended = (() => {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(PERS_COL_WIDTHS_KEY) || '{}'); } catch(e) {}
+    return Object.assign({}, PERS_COL_DEFAULTS, saved);
+  })();
+
+  const getPersResizableThs = () => [...document.querySelectorAll('#personalTable thead th.pers-resizable-col')];
+  const persIntendedSum = () => getPersResizableThs().reduce((s, th) => s + (persIntended[th.dataset.col] || 100), 0);
+  const persContainerW = () => persTableEl?.parentElement?.clientWidth ?? 0;
+  const persScale = () => { const s = persIntendedSum(); const c = persContainerW(); return (c > 0 && s > 0 && s < c) ? c / s : 1; };
+  const applyPersColWidths = () => {
+    if (!persTableEl) return;
+    const scale = persScale();
+    getPersResizableThs().forEach(th => { th.style.width = ((persIntended[th.dataset.col] || 100) * scale) + 'px'; });
+    persTableEl.style.width = Math.max(persIntendedSum() * scale, persContainerW()) + 'px';
+  };
+  applyPersColWidths();
+  window.addEventListener('resize', applyPersColWidths);
+
+  const PERS_RESIZE_ZONE = 12;
+  getPersResizableThs().forEach(th => {
+    let startX = 0, startIntended = 0, startScale = 1, dragging = false;
+    const inZone = (e) => { const r = th.getBoundingClientRect(); return e.clientX >= r.right - PERS_RESIZE_ZONE && e.clientX <= r.right; };
+    th.addEventListener('mousemove', (e) => { if (!dragging) th.style.cursor = inZone(e) ? 'col-resize' : ''; });
+    th.addEventListener('mouseleave', () => { if (!dragging) th.style.cursor = ''; });
+    const onMove = (e) => {
+      if (!dragging) return;
+      persIntended[th.dataset.col] = Math.max(50, startIntended + (e.clientX - startX) / startScale);
+      applyPersColWidths();
+    };
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      localStorage.setItem(PERS_COL_WIDTHS_KEY, JSON.stringify(persIntended));
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      th.classList.remove('col-resizing');
+    };
+    th.addEventListener('mousedown', (e) => {
+      if (!inZone(e)) return;
+      e.preventDefault(); e.stopPropagation();
+      dragging = true; startX = e.clientX;
+      startIntended = persIntended[th.dataset.col] || 100;
+      startScale = persScale();
+      th.classList.add('col-resizing');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
     });
   });
 
@@ -2684,13 +2742,13 @@ function renderPersonalTable() {
     const roleOptionsHtml = ROLE_OPTIONS.map(r =>
       `<option value="${r}"${r === l.role ? ' selected' : ''}>${r}</option>`
     ).join('');
-    const csvRole = l.contactTitle || '-';
+    const csvRole = l.contactTitle || '';
     tr.innerHTML = `
       <td>${l.company}</td>
       <td>${l.contactName}</td>
-      <td style="font-size:11px; color:var(--text-70); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px;" title="${csvRole}">${csvRole}</td>
+      <td style="font-size:11px; color:var(--text-70); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${csvRole}">${csvRole}</td>
       <td style="position:relative;">
-        <select class="role-select" style="background:transparent; border:1px solid var(--border); border-radius:4px; padding:2px 6px; font-size:11px; font-family:'SF Mono',monospace; cursor:pointer; outline:none; ${roleColor}">
+        <select class="role-select" style="background:transparent; border:1px solid var(--border); border-radius:4px; padding:2px 4px; font-size:11px; font-family:'SF Mono',monospace; cursor:pointer; outline:none; max-width:120px; ${roleColor}">
           ${roleOptionsHtml}
         </select>
       </td>
