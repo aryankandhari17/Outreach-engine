@@ -6,6 +6,12 @@ const http = require('http');
 const zlib = require('zlib');
 const { autoUpdater } = require('electron-updater');
 
+// Prevent duplicate app windows from multiple launches.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
+
 // Auto-updater configuration
 autoUpdater.autoDownload = true;       // Download silently in background
 autoUpdater.autoInstallOnAppQuit = true; // Install when the app is next quit
@@ -45,16 +51,25 @@ function createWindow() {
   win.loadFile('index.html');
 }
 
-app.whenReady().then(() => {
-  createWindow();
-  setupAutoUpdater();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+if (gotSingleInstanceLock) {
+  app.on('second-instance', () => {
+    const existingWindow = BrowserWindow.getAllWindows()[0];
+    if (!existingWindow) return;
+    if (existingWindow.isMinimized()) existingWindow.restore();
+    existingWindow.focus();
   });
-});
+
+  app.whenReady().then(() => {
+    createWindow();
+    setupAutoUpdater();
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
+    });
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
