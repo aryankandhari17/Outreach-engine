@@ -63,7 +63,26 @@ let isProcessing = false;
 let currentProcessingBatch = null;
 let cancelProcessing = false;
 let currentMode = localStorage.getItem('currentMode') || 'uiux';
+let currentPersonalMode = localStorage.getItem('currentPersonalMode') || 'ui-ux';
+let currentIndustryTemplate = localStorage.getItem('currentIndustryTemplate') || '';
 let activeCampaign = localStorage.getItem('activeCampaign') || 'Manual';
+
+const PERSONAL_MODE_LABELS = { 'ui-ux': 'UI/UX', 'brand-identity': 'Brand Identity' };
+
+const INDUSTRY_LABELS = {
+  'ui-ux': {
+    'ecommerce': 'Ecommerce', 'd2c': 'D2C', 'fintech': 'Fintech',
+    'hospitality-booking': 'Hospitality Booking', 'healthtech': 'Healthtech',
+    'b2b-saas': 'B2B SaaS', 'travel-tech': 'Travel Tech', 'edtech': 'Edtech',
+    'home-services': 'Home Services'
+  },
+  'brand-identity': {
+    'fnb': 'F&B', 'd2c-fashion-beauty': 'D2C Fashion & Beauty',
+    'premium-hospitality': 'Premium Hospitality', 'wellness-clinics': 'Wellness & Clinics',
+    'luxury-retail': 'Luxury Retail', 'interior-architecture': 'Interior & Architecture',
+    'cpg': 'CPG', 'events': 'Events', 'premium-education': 'Premium Education'
+  }
+};
 const CAMPAIGN_REGISTRY_KEY = 'campaignRegistryV1';
 let sidebarOpen = localStorage.getItem('sidebarOpen') !== 'false';
 let campaignRegistry = [];
@@ -1073,6 +1092,43 @@ _setTabs.forEach((id, idx) => {
   const el = document.getElementById(id);
   if (el) el.onclick = () => activateSettingsTab(idx);
 });
+
+function updateIndustryTemplateDropdown() {
+  const sel = document.getElementById('industryTemplateSelect');
+  if (!sel) return;
+  const labels = INDUSTRY_LABELS[currentPersonalMode] || {};
+  sel.innerHTML = '<option value="">Industry Template</option>';
+  Object.entries(labels).forEach(([slug, label]) => {
+    const opt = document.createElement('option');
+    opt.value = slug;
+    opt.textContent = label;
+    if (slug === currentIndustryTemplate) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function setPersonalMode(mode) {
+  currentPersonalMode = mode;
+  localStorage.setItem('currentPersonalMode', mode);
+  const label = PERSONAL_MODE_LABELS[mode] || mode;
+  const inlineEl = document.getElementById('personalModeLabelInline');
+  if (inlineEl) inlineEl.textContent = label;
+  // Reset template selection when mode changes
+  currentIndustryTemplate = '';
+  localStorage.setItem('currentIndustryTemplate', '');
+  updateIndustryTemplateDropdown();
+  // Close dropdown
+  const dd = document.getElementById('personalModeDropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function togglePersonalModeDropdown() {
+  const dd = document.getElementById('personalModeDropdown');
+  if (!dd) return;
+  const isOpen = dd.style.display === 'flex';
+  dd.style.display = isOpen ? 'none' : 'flex';
+  if (!isOpen) dd.style.flexDirection = 'column';
+}
 
 function switchMode(mode) {
   currentMode = mode;
