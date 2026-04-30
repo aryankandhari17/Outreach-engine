@@ -23,7 +23,14 @@
   <div class="mode-switcher no-drag" style="position: absolute; left: 50%; transform: translateX(-50%); display: flex; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 8px; border: 1px solid var(--border);">
     <div id="modeUiux" class="mode-btn active" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace;">UI/UX & PERFORMANCE</div>
     <div id="modeBranding" class="mode-btn" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace;">BRAND IDENTITY</div>
-    <div id="modePersonal" class="mode-btn" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace;">PERSONAL</div>
+    <div id="modePersonal" class="mode-btn" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace; position: relative; display: flex; align-items: center; gap: 0;">
+      <span>PERSONAL</span>
+      <span id="personalModeToggle" style="margin-left: 5px; opacity: 0.75; white-space: nowrap;" onclick="event.stopPropagation(); togglePersonalModeDropdown();">(<span id="personalModeLabelInline">UI/UX</span> ▾)</span>
+      <div id="personalModeDropdown" style="display:none; position:absolute; top:calc(100% + 8px); right:0; background:var(--bg); border:1px solid var(--border); border-radius:6px; z-index:300; min-width:150px; padding:4px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        <div class="pmopt" data-mode="ui-ux" style="padding:8px 12px; font-size:11px; cursor:pointer; border-radius:4px; transition:background 0.15s;">UI/UX</div>
+        <div class="pmopt" data-mode="brand-identity" style="padding:8px 12px; font-size:11px; cursor:pointer; border-radius:4px; transition:background 0.15s;">Brand Identity</div>
+      </div>
+    </div>
   </div>
   
   <div class="header-right no-drag" style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
@@ -137,9 +144,15 @@
           <button id="addPersonalLeadBtn" class="outline-btn" style="margin-left:16px; padding:4px 12px; font-size:11px;">+ NEW LEAD</button>
           <button id="exportPersonalBtn" class="outline-btn" style="margin-left:8px; padding:4px 12px; font-size:11px;">EXPORT CSV</button>
         </div>
-        <div class="filters" style="display:flex; gap:12px;">
-          <input type="text" id="personalSearchInput" class="minimal-input" placeholder="Search..." style="width:160px;">
-          <select id="personalStatusFilter" class="minimal-select">
+        <div class="filters" style="display:flex; align-items:center; gap:8px;">
+          <div style="width:1px; height:20px; background:var(--border); flex-shrink:0;"></div>
+          <select id="industryTemplateSelect" class="minimal-select" style="width:160px;">
+            <option value="">Industry Template</option>
+          </select>
+          <button id="applyTemplateBtn" class="outline-btn" style="padding:4px 12px; font-size:11px; white-space:nowrap;">APPLY TEMPLATE</button>
+          <div style="width:1px; height:20px; background:var(--border); flex-shrink:0;"></div>
+          <input type="text" id="personalSearchInput" class="minimal-input" placeholder="Search..." style="width:150px;">
+          <select id="personalStatusFilter" class="minimal-select" style="width:120px;">
             <option value="All">All Statuses</option>
             <option value="Draft">Draft</option>
             <option value="Ready">Ready</option>
@@ -155,10 +168,11 @@
             <tr>
               <th>Company</th>
               <th>Contact Name</th>
+              <th>Role</th>
               <th>Contact Email</th>
               <th>Relationship</th>
               <th>Website</th>
-              <th>Status</th>
+              <th style="width:120px;">Status</th>
             </tr>
           </thead>
           <tbody id="personalTableBody"></tbody>
@@ -290,6 +304,25 @@
       <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px;">
         <div class="section-label" style="margin-bottom:12px;">WEBSITE CONTEXT</div>
         <div id="pdWebsiteContext" style="font-size:12px; color:var(--text-70); line-height:1.6; white-space:pre-wrap; max-height:200px; overflow-y:auto;"></div>
+      </div>
+    </div>
+
+    <!-- Assembled template emails (stub — wired up in next task) -->
+    <div id="pdAssembledEmails" style="margin-bottom:24px;">
+      <div class="section-label" style="margin-bottom:12px;">ASSEMBLED EMAILS</div>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px;">
+          <div class="section-label" style="margin-bottom:8px;">EMAIL 1</div>
+          <div style="font-size:12px; color:var(--text-40); font-style:italic;">Template assembly not yet implemented.</div>
+        </div>
+        <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px;">
+          <div class="section-label" style="margin-bottom:8px;">EMAIL 2</div>
+          <div style="font-size:12px; color:var(--text-40); font-style:italic;">Template assembly not yet implemented.</div>
+        </div>
+        <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px;">
+          <div class="section-label" style="margin-bottom:8px;">EMAIL 3</div>
+          <div style="font-size:12px; color:var(--text-40); font-style:italic;">Template assembly not yet implemented.</div>
+        </div>
       </div>
     </div>
 
