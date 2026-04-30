@@ -1063,6 +1063,11 @@ async function initApp() {
   reassignBatches();
   renderTable();
 
+  // Personal mode — sync label + template dropdown from persisted state
+  const inlineEl = document.getElementById('personalModeLabelInline');
+  if (inlineEl) inlineEl.textContent = PERSONAL_MODE_LABELS[currentPersonalMode] || currentPersonalMode;
+  updateIndustryTemplateDropdown();
+
 }
 
 // Settings tab IDs — defined at top level so activateSettingsTab is globally accessible
@@ -1986,6 +1991,47 @@ document.getElementById('modeUiux').onclick = () => switchMode('uiux');
 document.getElementById('modeBranding').onclick = () => switchMode('branding');
 document.getElementById('modePersonal').onclick = () => switchMode('personal');
 
+// Personal mode dropdown — option selection
+document.querySelectorAll('.pmopt').forEach(opt => {
+  opt.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setPersonalMode(opt.dataset.mode);
+  });
+  opt.addEventListener('mouseenter', () => { opt.style.background = 'rgba(255,255,255,0.07)'; });
+  opt.addEventListener('mouseleave', () => { opt.style.background = ''; });
+});
+
+// Close personal mode dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const dd = document.getElementById('personalModeDropdown');
+  const toggle = document.getElementById('personalModeToggle');
+  if (dd && !dd.contains(e.target) && e.target !== toggle && !toggle?.contains(e.target)) {
+    dd.style.display = 'none';
+  }
+});
+
+// Industry template select — persist selection
+const industryTemplateSelect = document.getElementById('industryTemplateSelect');
+if (industryTemplateSelect) {
+  industryTemplateSelect.addEventListener('change', () => {
+    currentIndustryTemplate = industryTemplateSelect.value;
+    localStorage.setItem('currentIndustryTemplate', currentIndustryTemplate);
+  });
+}
+
+// Apply Template button — stub (assembly logic in next task)
+const applyTemplateBtn = document.getElementById('applyTemplateBtn');
+if (applyTemplateBtn) {
+  applyTemplateBtn.addEventListener('click', async () => {
+    if (!currentIndustryTemplate) { alert('Select an industry template first.'); return; }
+    applyTemplateBtn.disabled = true;
+    applyTemplateBtn.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle;"></span>APPLYING...';
+    await new Promise(r => setTimeout(r, 800)); // placeholder delay
+    applyTemplateBtn.disabled = false;
+    applyTemplateBtn.textContent = 'APPLY TEMPLATE';
+  });
+}
+
 // Safe setter helpers — never crash if an element was removed from HTML
 function safeSetValue(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
 function safeSetChecked(id, val) { const el = document.getElementById(id); if (el) el.checked = val; }
@@ -2564,20 +2610,40 @@ function renderPersonalTable() {
   countEl.innerText = `${inCampaign.length} LEADS`;
   tbody.innerHTML = '';
 
+  const ROLE_OPTIONS = ['CEO', 'CPO', 'Design Head', 'Unclassified'];
+
   displayed.forEach(l => {
+    if (!l.role) l.role = 'Unclassified';
     const tr = document.createElement('tr');
     tr.style.cursor = 'pointer';
     tr.className = 'dashboard-row';
     const webDisplay = l.website ? l.website.replace(/^https?:\/\//, '').replace(/\/$/, '') : '-';
     const statusClass = 'status-' + l.status.toLowerCase().replace(/\s+/g, '-');
+    const roleColor = l.role === 'Unclassified' ? 'color:#F59E0B; opacity:0.85;' : 'color:var(--text-95);';
+    const roleOptionsHtml = ROLE_OPTIONS.map(r =>
+      `<option value="${r}"${r === l.role ? ' selected' : ''}>${r}</option>`
+    ).join('');
     tr.innerHTML = `
       <td>${l.company}</td>
       <td>${l.contactName}</td>
+      <td style="position:relative;">
+        <select class="role-select" style="background:transparent; border:1px solid var(--border); border-radius:4px; padding:2px 6px; font-size:11px; font-family:'SF Mono',monospace; cursor:pointer; outline:none; ${roleColor}">
+          ${roleOptionsHtml}
+        </select>
+      </td>
       <td style="color:var(--text-70);">${l.contactEmail}</td>
       <td style="color:var(--text-70); max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${l.relationship}</td>
       <td style="color:var(--accent);">${webDisplay}</td>
       <td class="${statusClass}"><div style="display:flex;align-items:center;"><span class="status-dot"></span>${l.status}</div></td>
     `;
+    const roleSelect = tr.querySelector('.role-select');
+    roleSelect.addEventListener('change', (e) => {
+      e.stopPropagation();
+      l.role = e.target.value;
+      e.target.style.color = l.role === 'Unclassified' ? '#F59E0B' : 'var(--text-95)';
+      savePersonalLeads();
+    });
+    roleSelect.addEventListener('click', (e) => e.stopPropagation());
     tr.onclick = () => openPersonalLeadDetail(l);
     tbody.appendChild(tr);
   });
