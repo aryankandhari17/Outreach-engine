@@ -63,11 +63,22 @@ let isProcessing = false;
 let currentProcessingBatch = null;
 let cancelProcessing = false;
 let currentMode = localStorage.getItem('currentMode') || 'uiux';
+if (currentMode === 'personal') currentMode = 'uiux'; // migrate old format
+let activeMainTab = localStorage.getItem('activeMainTab') || 'automatic';
 let currentPersonalMode = localStorage.getItem('currentPersonalMode') || 'ui-ux';
 let currentIndustryTemplate = localStorage.getItem('currentIndustryTemplate') || '';
 let activeCampaign = localStorage.getItem('activeCampaign') || 'Manual';
 
-const PERSONAL_MODE_LABELS = { 'ui-ux': 'UI/UX', 'brand-identity': 'Brand Identity' };
+const PERSONAL_MODE_LABELS = { 'ui-ux': 'UI/UX', 'brand-identity': 'BRANDING' };
+
+function autoAssignRole(jobTitle) {
+  if (!jobTitle) return 'Unclassified';
+  const t = jobTitle.toLowerCase();
+  if (t.includes('ceo') || t.includes('chief executive') || t.includes('founder') || t.includes('co-founder') || t.includes('cofounder') || t.includes('managing director') || t.includes('president') || t.includes('owner')) return 'CEO';
+  if (t.includes('cpo') || t.includes('chief product') || t.includes('head of product') || t.includes('vp product') || t.includes('product director') || t.includes('product lead')) return 'CPO';
+  if (t.includes('design') || t.includes('creative director') || t.includes('head of ux') || t.includes('ux director') || t.includes('art director') || t.includes('chief design') || t.includes('cdo')) return 'Design Head';
+  return 'Unclassified';
+}
 
 const INDUSTRY_LABELS = {
   'ui-ux': {
@@ -1057,16 +1068,22 @@ async function initApp() {
     }
   } catch(e) { console.error('[OutreachEngine] LoadState fail:', e); }
 
+  // Migrate existing leads: add assignedRole if missing
+  leads.forEach(l => {
+    if (!l.assignedRole) l.assignedRole = autoAssignRole(l.jobTitle || '');
+  });
+
+  // Sync inline mode labels before first render
+  const autoLabelEl = document.getElementById('automaticModeLabelInline');
+  if (autoLabelEl) autoLabelEl.textContent = currentMode === 'branding' ? 'BRANDING' : 'UI/UX';
+  const persLabelEl = document.getElementById('personalModeLabelInline');
+  if (persLabelEl) persLabelEl.textContent = PERSONAL_MODE_LABELS[currentPersonalMode] || 'UI/UX';
+  updateIndustryTemplateDropdown();
+
   // First render happens AFTER leads are loaded
-  switchMode(currentMode);
+  switchMainTab(activeMainTab);
   renderSidebar();
   reassignBatches();
-  renderTable();
-
-  // Personal mode — sync label + template dropdown from persisted state
-  const inlineEl = document.getElementById('personalModeLabelInline');
-  if (inlineEl) inlineEl.textContent = PERSONAL_MODE_LABELS[currentPersonalMode] || currentPersonalMode;
-  updateIndustryTemplateDropdown();
 
 }
 
@@ -1112,73 +1129,87 @@ function updateIndustryTemplateDropdown() {
   });
 }
 
+function openModeDropdown(which, triggerEl) {
+  const ddAuto = document.getElementById('automaticModeDropdown');
+  const ddPers = document.getElementById('personalModeDropdown');
+  const target = which === 'automatic' ? ddAuto : ddPers;
+  const other  = which === 'automatic' ? ddPers : ddAuto;
+  if (!target) return;
+  const wasOpen = target.style.display === 'block';
+  if (other) other.style.display = 'none';
+  if (wasOpen) { target.style.display = 'none'; return; }
+  const rect = triggerEl.getBoundingClientRect();
+  target.style.top  = (rect.bottom + 4) + 'px';
+  target.style.left = rect.left + 'px';
+  target.style.display = 'block';
+}
+
+function setAutomaticMode(mode) {
+  currentMode = mode;
+  localStorage.setItem('currentMode', mode);
+  const label = mode === 'uiux' ? 'UI/UX' : 'BRANDING';
+  const el = document.getElementById('automaticModeLabelInline');
+  if (el) el.textContent = label;
+  document.getElementById('automaticModeDropdown').style.display = 'none';
+  switchMainTab('automatic');
+}
+
 function setPersonalMode(mode) {
   currentPersonalMode = mode;
   localStorage.setItem('currentPersonalMode', mode);
   const label = PERSONAL_MODE_LABELS[mode] || mode;
-  const inlineEl = document.getElementById('personalModeLabelInline');
-  if (inlineEl) inlineEl.textContent = label;
-  // Reset template selection when mode changes
+  const el = document.getElementById('personalModeLabelInline');
+  if (el) el.textContent = label;
   currentIndustryTemplate = '';
   localStorage.setItem('currentIndustryTemplate', '');
   updateIndustryTemplateDropdown();
-  // Close dropdown
-  const dd = document.getElementById('personalModeDropdown');
-  if (dd) dd.style.display = 'none';
+  document.getElementById('personalModeDropdown').style.display = 'none';
+  switchMainTab('personal');
 }
 
-function togglePersonalModeDropdown() {
-  const dd = document.getElementById('personalModeDropdown');
-  if (!dd) return;
-  const isOpen = dd.style.display === 'flex';
-  dd.style.display = isOpen ? 'none' : 'flex';
-  if (!isOpen) dd.style.flexDirection = 'column';
-}
+function switchMainTab(tab) {
+  activeMainTab = tab;
+  localStorage.setItem('activeMainTab', tab);
 
-function switchMode(mode) {
-  currentMode = mode;
-  localStorage.setItem('currentMode', mode);
+  // Close any open dropdowns
+  const ddA = document.getElementById('automaticModeDropdown');
+  const ddP = document.getElementById('personalModeDropdown');
+  if (ddA) ddA.style.display = 'none';
+  if (ddP) ddP.style.display = 'none';
 
-  const uiBtn = document.getElementById('modeUiux');
-  const brBtn = document.getElementById('modeBranding');
-  const prBtn = document.getElementById('modePersonal');
-
-  // Reset all three buttons
-  [uiBtn, brBtn, prBtn].forEach(btn => {
+  const autoBtn = document.getElementById('tabAutomatic');
+  const persBtn = document.getElementById('tabPersonal');
+  [autoBtn, persBtn].forEach(btn => {
+    if (!btn) return;
     btn.style.color = 'var(--text-40)';
     btn.style.background = 'transparent';
     btn.style.boxShadow = 'none';
   });
-
-  // Highlight active
-  const activeBtn = mode === 'uiux' ? uiBtn : mode === 'branding' ? brBtn : prBtn;
-  activeBtn.style.color = 'var(--bg)';
-  activeBtn.style.background = 'var(--accent)';
-  activeBtn.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+  const activeBtn = tab === 'automatic' ? autoBtn : persBtn;
+  if (activeBtn) {
+    activeBtn.style.color = 'var(--bg)';
+    activeBtn.style.background = 'var(--accent)';
+    activeBtn.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+  }
 
   const dashSections = document.getElementById('dashboardSections');
   const personalSection = document.getElementById('personalSection');
   const personalDetailView = document.getElementById('personalLeadDetailView');
   const leadDetailView = document.getElementById('leadDetailView');
 
-  if (mode === 'personal') {
-    // Hide regular views
+  if (tab === 'personal') {
     dashSections.style.display = 'none';
     leadDetailView.style.display = 'none';
-    // Show personal table, hide personal detail
     personalDetailView.style.display = 'none';
     personalSection.style.display = 'flex';
     renderPersonalTable();
   } else {
-    // Hide personal views
     personalSection.style.display = 'none';
     personalDetailView.style.display = 'none';
-    // Restore regular table
     dashSections.style.display = 'flex';
     leadDetailView.style.display = 'none';
-
     const scoreHeader = document.getElementById('scoreHeader');
-    if (scoreHeader) scoreHeader.style.display = (mode === 'branding') ? 'none' : 'table-cell';
+    if (scoreHeader) scoreHeader.style.display = (currentMode === 'branding') ? 'none' : 'table-cell';
     renderTable();
   }
 }
@@ -1259,9 +1290,22 @@ function renderTable() {
       return str.trim().split(/\\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
     };
     
+    const ASSIGNED_OPTIONS = ['CEO', 'CPO', 'Design Head', 'Unclassified'];
+    if (!l.assignedRole) l.assignedRole = autoAssignRole(l.jobTitle || '');
+    const assignedColor = l.assignedRole === 'Unclassified' ? '#F59E0B' : 'var(--text-95)';
+    const assignedOptsHtml = ASSIGNED_OPTIONS.map(r =>
+      `<option value="${r}"${r === l.assignedRole ? ' selected' : ''}>${r}</option>`
+    ).join('');
+
     tr.innerHTML = `
       <td style="text-align:center;">${l.source==='batch'?'📦':'👤'}</td>
       <td>${sc(l.firstName, '')}</td>
+      <td style="font-size:11px; color:var(--text-70); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px;" title="${l.jobTitle || ''}">${l.jobTitle || '-'}</td>
+      <td style="position:relative;">
+        <select class="assigned-role-select" style="background:transparent; border:1px solid var(--border); border-radius:4px; padding:2px 6px; font-size:11px; font-family:'SF Mono',monospace; cursor:pointer; outline:none; color:${assignedColor};">
+          ${assignedOptsHtml}
+        </select>
+      </td>
       <td>${sc(l.company, '')}</td>
       <td>${sc(l.industry, '-')}</td>
       <td>${sc(l.country, '-')}</td>
@@ -1291,9 +1335,20 @@ function renderTable() {
     `;
 
     tr.onclick = (e) => {
-      if(e.target.closest('.view-btn') || e.target.closest('.process-inline-btn') || e.target.closest('.export-inline-btn') || e.target.closest('.more-btn') || e.target.closest('.more-dropdown')) return;
+      if(e.target.closest('.view-btn') || e.target.closest('.process-inline-btn') || e.target.closest('.export-inline-btn') || e.target.closest('.more-btn') || e.target.closest('.more-dropdown') || e.target.closest('.assigned-role-select')) return;
       openLeadDetail(l);
     };
+
+    const assignedRoleSel = tr.querySelector('.assigned-role-select');
+    if (assignedRoleSel) {
+      assignedRoleSel.addEventListener('change', (e) => {
+        e.stopPropagation();
+        l.assignedRole = e.target.value;
+        e.target.style.color = l.assignedRole === 'Unclassified' ? '#F59E0B' : 'var(--text-95)';
+        saveAllState();
+      });
+      assignedRoleSel.addEventListener('click', (e) => e.stopPropagation());
+    }
 
     tr.querySelector('.view-btn')?.addEventListener('click', (e) => { e.stopPropagation(); openLeadDetail(l); });
 
@@ -1370,7 +1425,7 @@ function renderTable() {
   if (manualLeads.length > 0) {
     const manualHeader = document.createElement('tr');
     manualHeader.innerHTML = `
-      <td colspan="9" style="padding:10px 20px; font-family:'SF Mono',monospace; font-size:11px; color:rgba(255,255,255,0.35); font-weight:600; letter-spacing:0.8px; border-bottom:1px solid var(--border); background:#111113; position:sticky; top:40px; z-index:3; text-transform:uppercase;">
+      <td colspan="11" style="padding:10px 20px; font-family:'SF Mono',monospace; font-size:11px; color:rgba(255,255,255,0.35); font-weight:600; letter-spacing:0.8px; border-bottom:1px solid var(--border); background:#111113; position:sticky; top:40px; z-index:3; text-transform:uppercase;">
         Single Entries <span style="color:rgba(255,255,255,0.2); font-weight:400; margin-left:8px;">${manualLeads.length} lead${manualLeads.length !== 1 ? 's' : ''}</span>
       </td>`;
     tbody.appendChild(manualHeader);
@@ -1425,7 +1480,7 @@ function renderTable() {
 
     const header = document.createElement('tr');
     header.innerHTML = `
-      <td colspan="9" style="padding:16px 20px; font-family:'Inter', sans-serif; font-size:14px; color:#FFFFFF; font-weight:700; border-bottom:1px solid var(--border); background:#111113; position:sticky; top:40px; z-index:3;">
+      <td colspan="11" style="padding:16px 20px; font-family:'Inter', sans-serif; font-size:14px; color:#FFFFFF; font-weight:700; border-bottom:1px solid var(--border); background:#111113; position:sticky; top:40px; z-index:3;">
         <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
           <div style="display:flex; align-items:center; letter-spacing: 0.5px;">
             ${batchKey.toUpperCase()} <span style="color:var(--text-40); font-size:12px; margin-left:12px; font-weight:500;">${list.length} co${list.length !== 1 ? 's' : ''} &middot; ${batchDateStr}</span>
@@ -1527,7 +1582,7 @@ function renderTable() {
           const tierHeader = document.createElement('tr');
           tierHeader.style.cursor = 'pointer';
           tierHeader.innerHTML = `
-            <td colspan="9" style="padding:9px 20px 9px 32px; font-family:'SF Mono',monospace; font-size:10px; color:rgba(255,255,255,0.55); letter-spacing:1.2px; text-transform:uppercase; background:rgba(255,255,255,0.025); border-bottom:1px solid rgba(255,255,255,0.06);">
+            <td colspan="11" style="padding:9px 20px 9px 32px; font-family:'SF Mono',monospace; font-size:10px; color:rgba(255,255,255,0.55); letter-spacing:1.2px; text-transform:uppercase; background:rgba(255,255,255,0.025); border-bottom:1px solid rgba(255,255,255,0.06);">
               <div style="display:flex; align-items:center; justify-content:space-between;">
                 <div style="display:flex; align-items:center; gap:8px;">
                   <span style="color:${color}; font-size:7px; line-height:1;">&#9679;</span>
@@ -1987,27 +2042,32 @@ ${contentForAI}`,
   await window.electronAPI.saveState(leads);
 }
 
-document.getElementById('modeUiux').onclick = () => switchMode('uiux');
-document.getElementById('modeBranding').onclick = () => switchMode('branding');
-document.getElementById('modePersonal').onclick = () => switchMode('personal');
+// Main tab buttons
+document.getElementById('tabAutomatic').onclick = () => switchMainTab('automatic');
+document.getElementById('tabPersonal').onclick = () => switchMainTab('personal');
 
-// Personal mode dropdown — option selection
-document.querySelectorAll('.pmopt').forEach(opt => {
-  opt.addEventListener('click', (e) => {
-    e.stopPropagation();
-    setPersonalMode(opt.dataset.mode);
-  });
+// Automatic sub-mode options
+document.querySelectorAll('.auto-mode-opt').forEach(opt => {
+  opt.addEventListener('click', (e) => { e.stopPropagation(); setAutomaticMode(opt.dataset.mode); });
   opt.addEventListener('mouseenter', () => { opt.style.background = 'rgba(255,255,255,0.07)'; });
   opt.addEventListener('mouseleave', () => { opt.style.background = ''; });
 });
 
-// Close personal mode dropdown when clicking outside
+// Personal sub-mode options
+document.querySelectorAll('.personal-mode-opt').forEach(opt => {
+  opt.addEventListener('click', (e) => { e.stopPropagation(); setPersonalMode(opt.dataset.mode); });
+  opt.addEventListener('mouseenter', () => { opt.style.background = 'rgba(255,255,255,0.07)'; });
+  opt.addEventListener('mouseleave', () => { opt.style.background = ''; });
+});
+
+// Close all mode dropdowns on outside click
 document.addEventListener('click', (e) => {
-  const dd = document.getElementById('personalModeDropdown');
-  const toggle = document.getElementById('personalModeToggle');
-  if (dd && !dd.contains(e.target) && e.target !== toggle && !toggle?.contains(e.target)) {
-    dd.style.display = 'none';
-  }
+  const ddA = document.getElementById('automaticModeDropdown');
+  const ddP = document.getElementById('personalModeDropdown');
+  const aToggle = document.getElementById('automaticModeToggle');
+  const pToggle = document.getElementById('personalModeToggle');
+  if (ddA && !ddA.contains(e.target) && e.target !== aToggle && !aToggle?.contains(e.target)) ddA.style.display = 'none';
+  if (ddP && !ddP.contains(e.target) && e.target !== pToggle && !pToggle?.contains(e.target)) ddP.style.display = 'none';
 });
 
 // Industry template select — persist selection
@@ -2369,6 +2429,7 @@ function processCSVContent(content, fileName) {
         firstName: firstNameVal,
         lastName: lastNameVal,
         jobTitle: titleVal,
+        assignedRole: autoAssignRole(titleVal),
         company: companyVal,
         websiteURL: websiteVal,
         email: emailVal,
@@ -2612,7 +2673,7 @@ function renderPersonalTable() {
 
   const ROLE_OPTIONS = ['CEO', 'CPO', 'Design Head', 'Unclassified'];
 
-  displayed.forEach(l => {
+  const createPersonalRow = (l) => {
     if (!l.role) l.role = 'Unclassified';
     const tr = document.createElement('tr');
     tr.style.cursor = 'pointer';
@@ -2634,7 +2695,7 @@ function renderPersonalTable() {
       <td style="color:var(--text-70);">${l.contactEmail}</td>
       <td style="color:var(--text-70); max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${l.relationship}</td>
       <td style="color:var(--accent);">${webDisplay}</td>
-      <td class="${statusClass}"><div style="display:flex;align-items:center;"><span class="status-dot"></span>${l.status}</div></td>
+      <td class="${statusClass}" style="width:120px;"><div style="display:flex;align-items:center;"><span class="status-dot"></span>${l.status}</div></td>
     `;
     const roleSelect = tr.querySelector('.role-select');
     roleSelect.addEventListener('change', (e) => {
@@ -2644,9 +2705,77 @@ function renderPersonalTable() {
       savePersonalLeads();
     });
     roleSelect.addEventListener('click', (e) => e.stopPropagation());
-    tr.onclick = () => openPersonalLeadDetail(l);
-    tbody.appendChild(tr);
+    tr.onclick = (e) => {
+      if (e.target.closest('.role-select')) return;
+      openPersonalLeadDetail(l);
+    };
+    return tr;
+  };
+
+  // Group into manual + batches
+  const manualLeads = displayed.filter(l => !l.source || l.source === 'manual');
+  const batchMap = {};
+  displayed.filter(l => l.source === 'batch').forEach(l => {
+    const key = `Batch ${l.batch || 1}`;
+    if (!batchMap[key]) batchMap[key] = [];
+    batchMap[key].push(l);
   });
+
+  if (manualLeads.length > 0) {
+    const hdr = document.createElement('tr');
+    hdr.innerHTML = `
+      <td colspan="7" style="padding:10px 20px; font-family:'SF Mono',monospace; font-size:11px; color:rgba(255,255,255,0.35); font-weight:600; letter-spacing:0.8px; border-bottom:1px solid var(--border); background:#111113; position:sticky; top:40px; z-index:3; text-transform:uppercase;">
+        Single Entries <span style="color:rgba(255,255,255,0.2); font-weight:400; margin-left:8px;">${manualLeads.length} lead${manualLeads.length !== 1 ? 's' : ''}</span>
+      </td>`;
+    tbody.appendChild(hdr);
+    manualLeads.forEach(l => tbody.appendChild(createPersonalRow(l)));
+  }
+
+  Object.keys(batchMap).sort((a,b) => parseInt(a.replace('Batch ','')) - parseInt(b.replace('Batch ',''))).forEach(batchKey => {
+    const list = batchMap[batchKey];
+    let bDateStr = '';
+    if (list[0]?.dateAdded) {
+      const d = new Date(list[0].dateAdded);
+      bDateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+    }
+    const hdr = document.createElement('tr');
+    hdr.innerHTML = `
+      <td colspan="7" style="padding:16px 20px; font-family:'Inter',sans-serif; font-size:14px; color:#FFFFFF; font-weight:700; border-bottom:1px solid var(--border); background:#111113; position:sticky; top:40px; z-index:3;">
+        <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+          <div style="display:flex; align-items:center; letter-spacing:0.5px;">
+            ${batchKey.toUpperCase()} <span style="color:var(--text-40); font-size:12px; margin-left:12px; font-weight:500;">${list.length} lead${list.length !== 1 ? 's' : ''}${bDateStr ? ' · ' + bDateStr : ''}</span>
+          </div>
+          <button class="export-personal-batch-btn primary-btn" style="padding:6px 16px; font-size:11px; height:32px; background:#8B5CF6; border-color:#8B5CF6; color:white; box-shadow:0 4px 12px rgba(139,92,246,0.3); font-family:'SF Mono',monospace;">EXPORT BATCH</button>
+        </div>
+      </td>`;
+    const exportBtn = hdr.querySelector('.export-personal-batch-btn');
+    exportBtn.onclick = (e) => { e.stopPropagation(); exportPersonalBatch(list); };
+    tbody.appendChild(hdr);
+    list.forEach(l => tbody.appendChild(createPersonalRow(l)));
+  });
+}
+
+async function exportPersonalBatch(list) {
+  if (!list || list.length === 0) return;
+  const esc = str => !str ? '""' : `"${String(str).replace(/"/g, '""')}"`;
+  const maxEmails = list.reduce((m, l) => Math.max(m, (l.emails || []).length), 1);
+  const emailHeaders = [];
+  for (let i = 1; i <= maxEmails; i++) emailHeaders.push(`E${i} Subject`, `E${i} Body`);
+  let csv = ['Company', 'Contact Name', 'Contact Email', 'Website', 'Relationship', 'Role', 'Campaign', 'Status', ...emailHeaders].join(',') + '\n';
+  const appendSig = localStorage.getItem('personalSignatureEnabled') === 'true';
+  const exportSig = appendSig ? (typeof getPersonalSignature === 'function' ? getPersonalSignature() : '') : '';
+  list.forEach(l => {
+    const row = [esc(l.company), esc(l.contactName), esc(l.contactEmail), esc(l.website), esc(l.relationship), esc(l.role || 'Unclassified'), esc(l.campaign || 'Personal'), esc(l.status)];
+    for (let i = 0; i < maxEmails; i++) {
+      const em = (l.emails || [])[i] || { subject: '', body: '' };
+      const body = em.body || '';
+      row.push(esc(em.subject), esc(appendSig && exportSig && body.trim() ? `${body}\n\n${exportSig}` : body));
+    }
+    csv += row.join(',') + '\n';
+  });
+  const date = new Date().toISOString().split('T')[0];
+  const saved = await window.electronAPI.saveCSV({ csvData: csv, suggestedName: `labs22-personal-batch-${date}.csv` });
+  if (saved) alert(`Exported ${list.length} personal lead${list.length !== 1 ? 's' : ''}.`);
 }
 
 function openPersonalLeadDetail(lead) {
@@ -3015,6 +3144,10 @@ function processPersonalCSVContent(content, fileName) {
         if (exists) { dupeCount++; return; }
         const campaignName = normalizeCampaignName(activeCampaign) || 'Personal';
         ensureCampaignExists(campaignName);
+        const existingBatches = personalLeads
+          .filter(l => (l.campaign || 'Personal') === campaignName && l.source === 'batch' && l.batch)
+          .map(l => l.batch);
+        const batchNum = existingBatches.length > 0 ? Math.max(...existingBatches) : 0;
         personalLeads.push({
           id: `${Date.now()}-${rowIndex}-${emailIndex}`,
           company,
@@ -3023,6 +3156,8 @@ function processPersonalCSVContent(content, fileName) {
           website,
           relationship,
           status: 'Draft',
+          source: 'batch',
+          batch: batchNum + 1,
           emails: [{ subject: '', body: '' }],
           websiteContext: '',
           campaign: campaignName,
@@ -3113,6 +3248,7 @@ document.getElementById('savePersonalLeadBtn').onclick = () => {
     website: document.getElementById('plWebsite').value.trim(),
     relationship,
     status: 'Draft',
+    source: 'manual',
     emails: [{ subject: '', body: '' }],
     websiteContext: '',
     campaign: campaignName,

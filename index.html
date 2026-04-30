@@ -21,15 +21,13 @@
   </div>
   
   <div class="mode-switcher no-drag" style="position: absolute; left: 50%; transform: translateX(-50%); display: flex; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 8px; border: 1px solid var(--border);">
-    <div id="modeUiux" class="mode-btn active" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace;">UI/UX & PERFORMANCE</div>
-    <div id="modeBranding" class="mode-btn" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace;">BRAND IDENTITY</div>
-    <div id="modePersonal" class="mode-btn" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace; position: relative; display: flex; align-items: center; gap: 0;">
-      <span>PERSONAL</span>
-      <span id="personalModeToggle" style="margin-left: 5px; opacity: 0.75; white-space: nowrap;" onclick="event.stopPropagation(); togglePersonalModeDropdown();">(<span id="personalModeLabelInline">UI/UX</span> ▾)</span>
-      <div id="personalModeDropdown" style="display:none; position:absolute; top:calc(100% + 8px); right:0; background:var(--bg); border:1px solid var(--border); border-radius:6px; z-index:300; min-width:150px; padding:4px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-        <div class="pmopt" data-mode="ui-ux" style="padding:8px 12px; font-size:11px; cursor:pointer; border-radius:4px; transition:background 0.15s;">UI/UX</div>
-        <div class="pmopt" data-mode="brand-identity" style="padding:8px 12px; font-size:11px; cursor:pointer; border-radius:4px; transition:background 0.15s;">Brand Identity</div>
-      </div>
+    <div id="tabAutomatic" class="mode-btn active" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace; display: flex; align-items: center;">
+      AUTOMATIC
+      <span id="automaticModeToggle" style="margin-left:5px; white-space:nowrap; opacity:0.85;" onclick="event.stopPropagation(); openModeDropdown('automatic', this);">(<span id="automaticModeLabelInline">UI/UX</span>&nbsp;▾)</span>
+    </div>
+    <div id="tabPersonal" class="mode-btn" style="padding: 6px 16px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-40); font-family: 'SF Mono', monospace; display: flex; align-items: center;">
+      PERSONAL
+      <span id="personalModeToggle" style="margin-left:5px; white-space:nowrap; opacity:0.85;" onclick="event.stopPropagation(); openModeDropdown('personal', this);">(<span id="personalModeLabelInline">UI/UX</span>&nbsp;▾)</span>
     </div>
   </div>
   
@@ -96,6 +94,8 @@
               <tr>
                 <th style="width: 30px;"></th>
                 <th class="resizable-col sortable" data-col="name" data-sort="name" style="width:110px;">Name</th>
+                <th class="resizable-col" data-col="jobrole" style="width:110px;">Role</th>
+                <th class="resizable-col" data-col="assignedrole" style="width:110px;">Assigned</th>
                 <th class="resizable-col sortable" data-col="company" data-sort="company" style="width:100px;">Company</th>
                 <th class="resizable-col sortable" data-col="industry" data-sort="industry" style="width:120px;">Industry</th>
                 <th class="resizable-col sortable" data-col="country" data-sort="country" style="width:80px;">Country</th>
@@ -638,6 +638,16 @@
       <button id="confirmDeletePersonalBtn" class="outline-btn" style="flex:1; border-color:#EF4444; color:#EF4444; padding:10px;">DELETE</button>
     </div>
   </div>
+</div>
+
+<!-- Mode dropdown portals — position:fixed so they escape any overflow clip -->
+<div id="automaticModeDropdown" style="display:none; position:fixed; z-index:9999; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:4px; box-shadow:0 10px 30px rgba(0,0,0,0.6); min-width:130px;">
+  <div class="auto-mode-opt" data-mode="uiux" style="padding:8px 12px; font-size:11px; font-weight:700; letter-spacing:0.5px; cursor:pointer; border-radius:4px; font-family:'SF Mono',monospace;">UI/UX</div>
+  <div class="auto-mode-opt" data-mode="branding" style="padding:8px 12px; font-size:11px; font-weight:700; letter-spacing:0.5px; cursor:pointer; border-radius:4px; font-family:'SF Mono',monospace;">BRANDING</div>
+</div>
+<div id="personalModeDropdown" style="display:none; position:fixed; z-index:9999; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:4px; box-shadow:0 10px 30px rgba(0,0,0,0.6); min-width:130px;">
+  <div class="personal-mode-opt" data-mode="ui-ux" style="padding:8px 12px; font-size:11px; font-weight:700; letter-spacing:0.5px; cursor:pointer; border-radius:4px; font-family:'SF Mono',monospace;">UI/UX</div>
+  <div class="personal-mode-opt" data-mode="brand-identity" style="padding:8px 12px; font-size:11px; font-weight:700; letter-spacing:0.5px; cursor:pointer; border-radius:4px; font-family:'SF Mono',monospace;">BRANDING</div>
 </div>
 
 <!-- AI Prompt brains — edit these files independently to update each mode -->
