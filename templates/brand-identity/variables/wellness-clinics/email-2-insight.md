@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that the gap between leads and consults in wellness usually isn't a follow-up problem. It's that the brand hasn't done enough to make the booking feel safe and worth it. People don't ghost because they lost interest; they ghost because the trust never quite formed.

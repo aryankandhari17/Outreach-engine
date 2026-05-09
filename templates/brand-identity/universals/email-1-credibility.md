@@ -1,0 +1,1 @@
+I built brand identities for major Indian and international names, including work across the Tata Group, the Reliance Group, American Express, and Marriott, and have spent over half a decade working across categories from luxury to FMCG.

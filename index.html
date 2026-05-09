@@ -177,6 +177,17 @@
           <tbody id="personalTableBody"></tbody>
         </table>
       </div>
+      <div class="action-bar" style="padding: 16px 40px; border-top: 1px solid var(--border); height: auto; min-height: 80px;">
+        <div class="progress-info"></div>
+        <div class="actions" style="gap: 12px; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center;">
+              <span style="font-size: 8px; color: var(--accent); font-weight: 800; letter-spacing: 0.05em; margin-bottom: 2px;">BATCH SIZE</span>
+              <input type="number" id="personalBatchSizeInput" value="40" class="minimal-input" style="width: 58px; text-align: center; height: 32px; font-size: 13px; background: rgba(255,255,255,0.03);">
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div> <!-- End contentArea -->
@@ -296,8 +307,11 @@
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div style="flex:1;">
           <h2 id="pdCompany" style="font-size:24px; margin-bottom:8px;">Company Name</h2>
-          <div style="color:var(--text-70); font-size:14px; margin-bottom:12px;">
+          <div style="color:var(--text-70); font-size:14px; margin-bottom:6px;">
             <span id="pdContactName">Contact Name</span> &bull; <span id="pdContactEmail">email</span>
+          </div>
+          <div id="pdContactTitleRow" style="font-size:12px; color:var(--text-40); font-family:'SF Mono',monospace; margin-bottom:12px; display:none;">
+            <span id="pdContactTitle"></span>
           </div>
           <div style="margin-bottom:16px;">
             <div class="section-label" style="margin-bottom:5px;">RELATIONSHIP</div>
@@ -325,8 +339,8 @@
       </div>
     </div>
 
-    <!-- Assembled template emails (stub — wired up in next task) -->
-    <div id="pdAssembledEmails" style="margin-bottom:24px;">
+    <!-- Assembled template emails panel — hidden; Apply Template writes directly into the email composers below -->
+    <div id="pdAssembledEmails" style="display:none; margin-bottom:24px;">
       <div class="section-label" style="margin-bottom:12px;">ASSEMBLED EMAILS</div>
       <div style="display:flex; flex-direction:column; gap:16px;">
         <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px;">

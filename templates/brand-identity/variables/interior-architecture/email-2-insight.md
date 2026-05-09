@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that for design and architecture studios, the brand usually undersells the work without anyone realising. Clients hire from word of mouth and portfolio, but the brand around it rarely matches the quality of the projects. New work then comes in slower than it should.

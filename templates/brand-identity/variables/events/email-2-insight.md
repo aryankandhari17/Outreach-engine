@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that ticket momentum for events usually isn't about the event being weak. It's that the brand around it didn't do enough emotional work in advance. By the time the lineup or programme drops, people have decided whether to care, and the identity is what shaped that.

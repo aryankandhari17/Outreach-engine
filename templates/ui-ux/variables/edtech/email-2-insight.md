@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that most edtech is built like one product for two people. Parents need visibility into progress, students need a feeling of momentum, and the same dashboard rarely delivers both. So one of them quietly disengages first, and renewal gets harder by the week.

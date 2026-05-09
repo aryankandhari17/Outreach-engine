@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that brand erosion in F&B usually doesn't happen in the restaurant itself. It happens in the channels around it, on the app tile, the bag, the box, where the brand has minutes to land. When those moments feel generic, the brand quietly trains guests to compare on price.

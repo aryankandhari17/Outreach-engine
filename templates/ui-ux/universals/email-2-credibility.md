@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+For context, I'm a product designer with over half a decade of work behind me. Built Tata CLiQ Luxury (one of India's biggest and highest-rated ecommerce apps), helped SaaS companies launch products from scratch, and shipped projects in the UAE energy sector.

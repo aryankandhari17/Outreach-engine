@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that hesitation in ecommerce usually isn't about the product itself. It's about whether the buyer can picture using it, trust the price, and feel like the brand has earned the next click. When any of those is shaky, the cart fills slower.

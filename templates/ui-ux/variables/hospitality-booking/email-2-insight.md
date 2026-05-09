@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that direct sites usually don't lose because of price or trust. They lose because the OTA has rehearsed the booking decision for years, and the hotel's own site asks guests to do more work to reach the same outcome. Easier wins, even at a higher rate.

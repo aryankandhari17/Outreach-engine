@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadState: () => ipcRenderer.invoke('state:load'),
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
   aiCall: (params) => ipcRenderer.invoke('ai:call', params),
-  saveExportGroup: (params) => ipcRenderer.invoke('dialog:saveExportGroup', params)
+  saveExportGroup: (params) => ipcRenderer.invoke('dialog:saveExportGroup', params),
+  readTemplateFile: (relativePath) => ipcRenderer.invoke('templates:readFile', relativePath)
 });

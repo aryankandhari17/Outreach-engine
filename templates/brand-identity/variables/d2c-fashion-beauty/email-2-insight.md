@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that recall in D2C usually isn't about how much you show up. It's about whether the brand has a recognisable shape someone can hold in their head between exposures. Most D2C brands have presence without that shape, and end up paying to reintroduce themselves every quarter.

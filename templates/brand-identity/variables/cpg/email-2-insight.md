@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that recall in CPG usually isn't a creative problem, it's a courage problem. Most packaging plays inside category conventions to feel "professional," and that's exactly what makes it forgettable. The brands people remember broke a code on purpose.

@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that travel platforms usually invest where the user is dreaming and skimp where the user is deciding. Beautiful imagery and recommendations up top, then thin answers on cancellation, availability, and what happens if something changes. Anxiety peaks where the design stops trying.

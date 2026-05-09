@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that drop-off in fintech isn't usually about the steps themselves. It's about the moment the user can't tell what's happening next. Once that uncertainty creeps in, even a clean KYC flow starts feeling heavy.

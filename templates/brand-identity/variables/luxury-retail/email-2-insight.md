@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that premium erosion in luxury usually doesn't start at the price tag. It starts when the brand stops doing symbolic work, and the customer's attention drifts to materials, comparisons, and resale value. Once that frame takes over, the price has to keep proving itself with every interaction.

@@ -57,6 +57,8 @@ const BRANDING_SCHEMA = {
   }
 };
 
+const TEMPLATE_VERSION = 3;
+
 // State
 let leads = [];
 let isProcessing = false;
@@ -71,13 +73,156 @@ let activeCampaign = localStorage.getItem('activeCampaign') || 'Manual';
 
 const PERSONAL_MODE_LABELS = { 'ui-ux': 'UI/UX', 'brand-identity': 'BRANDING' };
 
+// ─── Rules-based role classifier ────────────────────────────────────────────
+
+const ROLE_KEYWORDS = {
+  CEO: [
+    'ceo', 'co-ceo', 'chief executive officer', 'chief executive',
+    'founder', 'co-founder', 'cofounder',
+    'managing director', 'md', 'partner', 'president'
+  ],
+  CPO: [
+    'cpo', 'chief product officer', 'chief product', 'head of product',
+    'vp of product', 'vp product', 'vice president of product',
+    'product officer', 'digital transformation', 'digital transformations',
+    'product and technology', 'product & technology', 'product tech'
+  ],
+  'Design Head': [
+    'head of design', 'design head', 'vp of design', 'vp design',
+    'vice president of design', 'chief design officer', 'chief design',
+    'design director', 'head of product design', 'design lead'
+  ]
+};
+
+// Priority order: CEO > CPO > Design Head
+const ROLE_PRIORITY = ['CEO', 'CPO', 'Design Head'];
+
+function detectRole(title) {
+  const result = { role: 'Unclassified', roleSource: null, matchedKeywords: [], originalTitle: title ?? null };
+
+  const raw = String(title ?? '').trim();
+  if (!raw) return result;
+
+  // Normalize: lowercase, replace separators with space, collapse whitespace
+  const normalized = raw.toLowerCase().replace(/[&+/,]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // Collect all matches per bucket (sorted longest-first for specificity comparison)
+  const bucketMatches = {};
+  for (const bucket of ROLE_PRIORITY) {
+    const hits = [];
+    for (const kw of ROLE_KEYWORDS[bucket]) {
+      if (kw === 'md') {
+        // Standalone token only — not inside another word (e.g. "Damascus" must not match)
+        if (/(?:^|\s)md(?:$|\s)/.test(' ' + normalized + ' ')) hits.push(kw);
+      } else {
+        if (normalized.includes(kw)) hits.push(kw);
+      }
+    }
+    if (hits.length > 0) {
+      hits.sort((a, b) => b.length - a.length); // longest match first
+      bucketMatches[bucket] = hits;
+    }
+  }
+
+  const matched = ROLE_PRIORITY.filter(b => bucketMatches[b]);
+  if (matched.length === 0) return result;
+
+  // Higher-priority bucket wins by default. Exception: if a lower-priority bucket's
+  // best keyword is a strict extension of the higher-priority bucket's best keyword
+  // (i.e., the higher-priority match is just a prefix), the more specific match wins.
+  // e.g. CPO "head of product" is a prefix of Design Head "head of product design" → Design Head wins.
+  let winner = matched[0];
+  for (let i = 1; i < matched.length; i++) {
+    const challenger = matched[i];
+    const winnerKw = bucketMatches[winner][0];
+    const challengerKw = bucketMatches[challenger][0];
+    if (challengerKw.includes(winnerKw) && challengerKw.length > winnerKw.length) {
+      winner = challenger;
+    }
+  }
+
+  result.role = winner;
+  result.roleSource = 'rules';
+  result.matchedKeywords = bucketMatches[winner];
+  return result;
+}
+
 function autoAssignRole(jobTitle) {
-  if (!jobTitle) return 'Unclassified';
-  const t = jobTitle.toLowerCase();
-  if (t.includes('ceo') || t.includes('chief executive') || t.includes('founder') || t.includes('co-founder') || t.includes('cofounder') || t.includes('managing director') || t.includes('president') || t.includes('owner')) return 'CEO';
-  if (t.includes('cpo') || t.includes('chief product') || t.includes('head of product') || t.includes('vp product') || t.includes('product director') || t.includes('product lead')) return 'CPO';
-  if (t.includes('design') || t.includes('creative director') || t.includes('head of ux') || t.includes('ux director') || t.includes('art director') || t.includes('chief design') || t.includes('cdo')) return 'Design Head';
-  return 'Unclassified';
+  return detectRole(jobTitle).role;
+}
+
+// ─── Brand Identity role classifier ─────────────────────────────────────────
+
+const BI_ROLE_KEYWORDS = {
+  CEO: [
+    'ceo', 'co-ceo', 'chief executive officer', 'chief executive',
+    'founder', 'co-founder', 'cofounder',
+    'managing director', 'md', 'partner', 'president', 'principal'
+  ],
+  CMO: [
+    'cmo', 'chief marketing officer', 'chief marketing',
+    'head of marketing', 'vp of marketing', 'vp marketing',
+    'vice president of marketing', 'marketing director', 'marketing officer',
+    'head of growth', 'growth officer'
+  ],
+  'Creative Director': [
+    'creative director', 'head of brand', 'brand director',
+    'vp of brand', 'vp brand', 'chief creative officer', 'chief creative',
+    'head of creative', 'creative head', 'design director',
+    'brand lead', 'head of brand identity'
+  ]
+};
+
+const BI_ROLE_PRIORITY = ['CEO', 'CMO', 'Creative Director'];
+
+function detectBrandIdentityRole(title) {
+  const result = { role: 'Unclassified', roleSource: null, matchedKeywords: [], originalTitle: title ?? null };
+
+  const raw = String(title ?? '').trim();
+  if (!raw) return result;
+
+  const normalized = raw.toLowerCase().replace(/[&+/,]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const bucketMatches = {};
+  for (const bucket of BI_ROLE_PRIORITY) {
+    const hits = [];
+    for (const kw of BI_ROLE_KEYWORDS[bucket]) {
+      if (kw === 'md') {
+        if (/(?:^|\s)md(?:$|\s)/.test(' ' + normalized + ' ')) hits.push(kw);
+      } else {
+        if (normalized.includes(kw)) hits.push(kw);
+      }
+    }
+    if (hits.length > 0) {
+      hits.sort((a, b) => b.length - a.length);
+      bucketMatches[bucket] = hits;
+    }
+  }
+
+  const matched = BI_ROLE_PRIORITY.filter(b => bucketMatches[b]);
+  if (matched.length === 0) return result;
+
+  // Same specificity-override logic as UI/UX classifier
+  let winner = matched[0];
+  for (let i = 1; i < matched.length; i++) {
+    const challenger = matched[i];
+    const winnerKw = bucketMatches[winner][0];
+    const challengerKw = bucketMatches[challenger][0];
+    if (challengerKw.includes(winnerKw) && challengerKw.length > winnerKw.length) {
+      winner = challenger;
+    }
+  }
+
+  result.role = winner;
+  result.roleSource = 'rules';
+  result.matchedKeywords = bucketMatches[winner];
+  return result;
+}
+
+// Dispatcher — picks the right classifier based on personal mode
+function detectRoleForMode(title, mode) {
+  if (mode === 'brand-identity') return detectBrandIdentityRole(title);
+  return detectRole(title);
 }
 
 const INDUSTRY_LABELS = {
@@ -91,7 +236,8 @@ const INDUSTRY_LABELS = {
     'fnb': 'F&B', 'd2c-fashion-beauty': 'D2C Fashion & Beauty',
     'premium-hospitality': 'Premium Hospitality', 'wellness-clinics': 'Wellness & Clinics',
     'luxury-retail': 'Luxury Retail', 'interior-architecture': 'Interior & Architecture',
-    'cpg': 'CPG', 'events': 'Events', 'premium-education': 'Premium Education'
+    'cpg': 'CPG', 'events': 'Events', 'premium-education': 'Premium Education',
+    'luxury-hospitality-suppliers': 'Luxury Hospitality Suppliers'
   }
 };
 const CAMPAIGN_REGISTRY_KEY = 'campaignRegistryV1';
@@ -2158,16 +2304,255 @@ if (industryTemplateSelect) {
   });
 }
 
-// Apply Template button — stub (assembly logic in next task)
+// ─── Template Assembly ───────────────────────────────────────────────────────
+
+async function readTemplateFile(relativePath) {
+  try {
+    const content = await window.electronAPI.readTemplateFile(relativePath);
+    if (!content || content.includes('<!-- TODO: Add content -->')) return null;
+    return content.trim();
+  } catch (e) {
+    return null;
+  }
+}
+
+function parseEmail1Sections(content) {
+  const sections = {};
+  const parts = content.split(/\n---\n/);
+  parts.forEach(part => {
+    part = part.trim();
+    const headerMatch = part.match(/^##\s+([\w-]+)/m);
+    if (!headerMatch) return;
+    const slug = headerMatch[1].toLowerCase().trim();
+    const subjectMatch = part.match(/\*\*Subject:\*\*\s*(.+)/);
+    if (!subjectMatch) return;
+    const subject = subjectMatch[1].trim();
+    const subjectLineEnd = part.indexOf(subjectMatch[0]) + subjectMatch[0].length;
+    const body = part.slice(subjectLineEnd).trim();
+    sections[slug] = { subject, body };
+  });
+  return sections;
+}
+
+function normalizeRoleSlug(role) {
+  if (!role) return null;
+  const r = role.toLowerCase().trim();
+  // UI/UX roles
+  if (r === 'ceo') return 'ceo';
+  if (r === 'cpo') return 'cpo';
+  if (r === 'design head') return 'design-head';
+  // Brand Identity roles
+  if (r === 'cmo') return 'cmo';
+  if (r === 'creative director') return 'creative-director';
+  return null;
+}
+
+async function assembleEmailsForLead(lead, modeOverride) {
+  const mode = modeOverride || currentPersonalMode;
+  const industry = (lead.industry || '').toLowerCase().trim();
+  const roleSlug = normalizeRoleSlug(lead.role);
+
+  if (!industry) throw new Error('Industry not set for this lead.');
+  if (!roleSlug) throw new Error('Role not assigned — unclassified leads are skipped.');
+
+  const modeLabels = INDUSTRY_LABELS[mode] || {};
+  if (!modeLabels[industry]) throw new Error(`Industry "${industry}" not found in ${mode} templates.`);
+
+  const [
+    credibility1, cta1, email1Content, whatWeDo,
+    opener2, insight2, credibility2, cta2,
+    email3Content
+  ] = await Promise.all([
+    readTemplateFile(`${mode}/universals/email-1-credibility.md`),
+    readTemplateFile(`${mode}/universals/email-1-cta.md`),
+    readTemplateFile(`${mode}/variables/${industry}/email-1.md`),
+    readTemplateFile(`${mode}/variables/${industry}/email-1-what-we-do.md`),
+    readTemplateFile(`${mode}/universals/email-2-opener.md`),
+    readTemplateFile(`${mode}/variables/${industry}/email-2-insight.md`),
+    readTemplateFile(`${mode}/universals/email-2-credibility.md`),
+    readTemplateFile(`${mode}/universals/email-2-cta.md`),
+    readTemplateFile(`${mode}/universals/email-3.md`)
+  ]);
+
+  const missing = [];
+  if (!credibility1) missing.push(`${mode}/universals/email-1-credibility.md`);
+  if (!cta1) missing.push(`${mode}/universals/email-1-cta.md`);
+  if (!email1Content) missing.push(`${mode}/variables/${industry}/email-1.md`);
+  if (!whatWeDo) missing.push(`${mode}/variables/${industry}/email-1-what-we-do.md`);
+  if (!opener2) missing.push(`${mode}/universals/email-2-opener.md`);
+  if (!insight2) missing.push(`${mode}/variables/${industry}/email-2-insight.md`);
+  if (!credibility2) missing.push(`${mode}/universals/email-2-credibility.md`);
+  if (!cta2) missing.push(`${mode}/universals/email-2-cta.md`);
+  if (!email3Content) missing.push(`${mode}/universals/email-3.md`);
+  if (missing.length > 0) throw new Error('Missing or empty template files:\n' + missing.join('\n'));
+
+  const email1Sections = parseEmail1Sections(email1Content);
+  const roleSection = email1Sections[roleSlug];
+  if (!roleSection) throw new Error(`No "${roleSlug}" section found in ${mode}/variables/${industry}/email-1.md`);
+
+  const firstName = (lead.contactName || '').trim().split(/\s+/)[0] || '[Name]';
+
+  const email1Subject = roleSection.subject;
+  const email1Body = `Hi ${firstName},\n\n${roleSection.body}\n\n${whatWeDo} ${credibility1}\n\n${cta1}`;
+
+  const email2Subject = `Re: ${email1Subject}`;
+  const email2Body = `Hi ${firstName},\n\n${opener2}\n\n${insight2}\n\n${credibility2}\n\n${cta2}`;
+
+  const email3Subject = `Re: ${email1Subject}`;
+  const email3Body = email3Content
+    .replace('[Name]', firstName)
+    .replace(/\n\nBest,\n\S+\s*$/, '')
+    .trimEnd();
+
+  return {
+    email1: { subject: email1Subject, body: email1Body },
+    email2: { subject: email2Subject, body: email2Body },
+    email3: { subject: email3Subject, body: email3Body }
+  };
+}
+
+// Renders assembled emails in the lead detail view panel
+async function renderPersonalAssembledEmails(lead) {
+  const container = document.getElementById('pdAssembledEmails');
+  if (!container) return;
+
+  const roleSlug = normalizeRoleSlug(lead.role);
+  if (!lead.industry || !roleSlug) {
+    container.innerHTML = `
+      <div class="section-label" style="margin-bottom:12px;">ASSEMBLED EMAILS</div>
+      <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px;">
+        <div style="font-size:12px; color:var(--text-40); font-style:italic;">Assign a role and apply an industry template to generate emails.</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="section-label" style="margin-bottom:12px;">ASSEMBLED EMAILS</div>
+    <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px;">
+      <div style="font-size:12px; color:var(--text-40); font-style:italic;">Assembling...</div>
+    </div>`;
+
+  try {
+    const assembled = await assembleEmailsForLead(lead);
+
+    const makeEmailBlock = (label, subject, body) => {
+      const escapeHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const bodyHtml = escapeHtml(body).replace(/\n/g, '<br>');
+      return `
+        <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.02);">
+            <div class="section-label">${label}</div>
+            <button class="assembled-copy-btn outline-btn" data-subject="${escapeHtml(subject)}" data-body="${escapeHtml(body)}" style="font-size:10px; padding:3px 10px;">Copy</button>
+          </div>
+          <div style="padding:16px;">
+            <div style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace; margin-bottom:4px;">SUBJECT</div>
+            <div style="font-size:13px; color:var(--text-95); margin-bottom:14px; font-weight:500;">${escapeHtml(subject)}</div>
+            <div style="font-size:10px; color:var(--text-40); font-family:'SF Mono',monospace; margin-bottom:4px;">BODY</div>
+            <div style="font-size:13px; color:var(--text-70); line-height:1.65; white-space:pre-wrap;">${bodyHtml}</div>
+          </div>
+        </div>`;
+    };
+
+    container.innerHTML = `<div class="section-label" style="margin-bottom:12px;">ASSEMBLED EMAILS</div>` +
+      makeEmailBlock('EMAIL 1', assembled.email1.subject, assembled.email1.body) +
+      makeEmailBlock('EMAIL 2', assembled.email2.subject, assembled.email2.body) +
+      makeEmailBlock('EMAIL 3', assembled.email3.subject, assembled.email3.body);
+
+    container.querySelectorAll('.assembled-copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const subject = btn.dataset.subject;
+        const body = btn.dataset.body;
+        const text = `Subject: ${subject}\n\n${body}`;
+        navigator.clipboard.writeText(text).then(() => {
+          const orig = btn.innerText;
+          btn.classList.add('copied');
+          btn.innerText = 'Copied!';
+          setTimeout(() => { btn.classList.remove('copied'); btn.innerText = orig; }, 2000);
+        });
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `
+      <div class="section-label" style="margin-bottom:12px;">ASSEMBLED EMAILS</div>
+      <div style="background:var(--panel); border:1px solid rgba(239,68,68,0.3); border-radius:var(--radius); padding:16px;">
+        <div style="font-size:12px; color:#EF4444; font-family:'SF Mono',monospace; white-space:pre-wrap;">${err.message}</div>
+      </div>`;
+  }
+}
+
+// Apply Template button — assembles emails for all classified leads in the current campaign
 const applyTemplateBtn = document.getElementById('applyTemplateBtn');
 if (applyTemplateBtn) {
   applyTemplateBtn.addEventListener('click', async () => {
     if (!currentIndustryTemplate) { alert('Select an industry template first.'); return; }
+
+    const inCampaign = personalLeads.filter(l =>
+      (l.campaign || 'Personal') === activeCampaign &&
+      (l.personalMode || 'ui-ux') === currentPersonalMode
+    );
+    if (inCampaign.length === 0) { alert('No leads in the current campaign.'); return; }
+
+    // Validation: check all required universal files exist before starting
+    const modeLabels = INDUSTRY_LABELS[currentPersonalMode] || {};
+    if (!modeLabels[currentIndustryTemplate]) {
+      alert(`Industry "${currentIndustryTemplate}" not found in ${currentPersonalMode} templates.`);
+      return;
+    }
+    const testFiles = ['email-1-credibility.md', 'email-1-cta.md', 'email-2-opener.md', 'email-2-credibility.md', 'email-2-cta.md', 'email-3.md'];
+    for (const f of testFiles) {
+      const content = await readTemplateFile(`${currentPersonalMode}/universals/${f}`);
+      if (!content) {
+        alert(`Template file missing or empty: ${currentPersonalMode}/universals/${f}\n\nCannot apply template.`);
+        return;
+      }
+    }
+
     applyTemplateBtn.disabled = true;
     applyTemplateBtn.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle;"></span>APPLYING...';
-    await new Promise(r => setTimeout(r, 800)); // placeholder delay
+
+    let assembled = 0;
+    let skipped = 0;
+    const errors = [];
+
+    for (const lead of inCampaign) {
+      lead.industry = currentIndustryTemplate;
+      // Re-run detection on unclassified leads that haven't been manually overridden
+      if (lead.role === 'Unclassified' && !lead.roleManuallySet) {
+        const reDetect = detectRoleForMode(lead.contactTitle || lead.originalTitle || null, currentPersonalMode);
+        if (reDetect.role !== 'Unclassified') {
+          lead.role = reDetect.role;
+          lead.roleSource = reDetect.roleSource;
+          lead.matchedKeywords = reDetect.matchedKeywords;
+        }
+      }
+      const roleSlug = normalizeRoleSlug(lead.role);
+      if (!roleSlug) { skipped++; continue; }
+      try {
+        const result = await assembleEmailsForLead(lead, currentPersonalMode);
+        lead.emails = [
+          { subject: result.email1.subject, body: result.email1.body },
+          { subject: result.email2.subject, body: result.email2.body },
+          { subject: result.email3.subject, body: result.email3.body }
+        ];
+        lead.templateVersion = TEMPLATE_VERSION;
+        if (lead.status === 'Draft') lead.status = 'Ready';
+        assembled++;
+      } catch (err) {
+        errors.push(`${lead.company}: ${err.message}`);
+        skipped++;
+      }
+    }
+
+    savePersonalLeads();
+    renderPersonalTable();
+
     applyTemplateBtn.disabled = false;
     applyTemplateBtn.textContent = 'APPLY TEMPLATE';
+
+    let msg = `Template applied to ${assembled} lead${assembled !== 1 ? 's' : ''}.`;
+    if (skipped > 0) msg += `\n${skipped} lead${skipped !== 1 ? 's' : ''} skipped — role not assigned.`;
+    if (errors.length > 0) msg += `\n\nErrors:\n${errors.join('\n')}`;
+    alert(msg);
   });
 }
 
@@ -2596,6 +2981,21 @@ document.getElementById('statusFilter').addEventListener('change', renderTable);
 document.getElementById('searchInput').addEventListener('input', renderTable);
 document.getElementById('batchSizeInput').addEventListener('change', () => { reassignBatches(); renderTable(); });
 
+function reassignPersonalBatches() {
+  const batchSize = parseInt(document.getElementById('personalBatchSizeInput')?.value || 40);
+  const campaignName = normalizeCampaignName(activeCampaign) || 'Personal';
+  let counter = 0;
+  personalLeads.forEach(l => {
+    if ((l.campaign || 'Personal') === campaignName && l.source === 'batch') {
+      l.batch = Math.floor(counter / batchSize) + 1;
+      counter++;
+    }
+  });
+  savePersonalLeads();
+}
+
+document.getElementById('personalBatchSizeInput').addEventListener('change', () => { reassignPersonalBatches(); renderPersonalTable(); });
+
 document.getElementById('processNextBatchBtn').onclick = async () => {
   if (isProcessing) return;
   if (!ensureClaudeKeyBeforeProcessing()) return;
@@ -2742,7 +3142,10 @@ function renderPersonalTable() {
   const search = (document.getElementById('personalSearchInput').value || '').toLowerCase();
   const statusFilter = document.getElementById('personalStatusFilter').value;
 
-  const inCampaign = personalLeads.filter(l => (l.campaign || 'Personal') === activeCampaign);
+  const inCampaign = personalLeads.filter(l =>
+    (l.campaign || 'Personal') === activeCampaign &&
+    (l.personalMode || 'ui-ux') === currentPersonalMode
+  );
   const displayed = inCampaign.filter(l => {
     if (statusFilter !== 'All' && l.status !== statusFilter) return false;
     if (search && !`${l.company} ${l.contactName} ${l.relationship}`.toLowerCase().includes(search)) return false;
@@ -2752,7 +3155,9 @@ function renderPersonalTable() {
   countEl.innerText = `${inCampaign.length} LEADS`;
   tbody.innerHTML = '';
 
-  const ROLE_OPTIONS = ['CEO', 'CPO', 'Design Head', 'Unclassified'];
+  const ROLE_OPTIONS = currentPersonalMode === 'brand-identity'
+    ? ['CEO', 'CMO', 'Creative Director', 'Unclassified']
+    : ['CEO', 'CPO', 'Design Head', 'Unclassified'];
 
   const createPersonalRow = (l) => {
     if (!l.role) l.role = 'Unclassified';
@@ -2769,28 +3174,23 @@ function renderPersonalTable() {
     tr.innerHTML = `
       <td>${l.company}</td>
       <td>${l.contactName}</td>
-      <td style="padding:0 6px;">
-        <input class="csv-role-input" value="${csvRole.replace(/"/g, '&quot;')}" placeholder="—" title="${csvRole}"
-          style="background:transparent; border:1px solid transparent; border-radius:3px; padding:2px 4px; font-size:11px; font-family:'SF Mono',monospace; color:var(--text-70); width:100%; box-sizing:border-box; outline:none;"
-          onfocus="this.style.borderColor='var(--border)'" onblur="this.style.borderColor='transparent'"/>
-      </td>
+      <td style="padding:0 6px; font-size:11px; font-family:'SF Mono',monospace; color:var(--text-70);" title="${csvRole.replace(/"/g, '&quot;')}">${csvRole || '—'}</td>
       <td style="position:relative;">
         <select class="role-select" style="background:transparent; border:1px solid var(--border); border-radius:4px; padding:2px 4px; font-size:11px; font-family:'SF Mono',monospace; cursor:pointer; outline:none; max-width:120px; ${roleColor}">
           ${roleOptionsHtml}
         </select>
       </td>
       <td style="color:var(--text-70);">${l.contactEmail}</td>
-      <td style="color:var(--text-70); max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${l.relationship}</td>
+      <td style="color:var(--text-70);">${l.relationship}</td>
       <td style="color:var(--accent);">${webDisplay}</td>
       <td class="${statusClass}" style="width:120px;"><div style="display:flex;align-items:center;"><span class="status-dot"></span>${l.status}</div></td>
     `;
-    const csvRoleInput = tr.querySelector('.csv-role-input');
-    csvRoleInput.addEventListener('input', (e) => { l.contactTitle = e.target.value; savePersonalLeads(); });
-    csvRoleInput.addEventListener('click', (e) => e.stopPropagation());
     const roleSelect = tr.querySelector('.role-select');
     roleSelect.addEventListener('change', (e) => {
       e.stopPropagation();
       l.role = e.target.value;
+      l.roleManuallySet = true;
+      l.roleSource = 'manual';
       e.target.style.color = l.role === 'Unclassified' ? '#F59E0B' : 'var(--text-95)';
       savePersonalLeads();
     });
@@ -2882,6 +3282,15 @@ function openPersonalLeadDetail(lead) {
   document.getElementById('pdCompany').innerText = lead.company;
   document.getElementById('pdContactName').innerText = lead.contactName;
   document.getElementById('pdContactEmail').innerText = lead.contactEmail;
+  const titleEl = document.getElementById('pdContactTitle');
+  const titleRow = document.getElementById('pdContactTitleRow');
+  const titleVal = lead.contactTitle || '';
+  if (titleVal) {
+    titleEl.innerText = titleVal;
+    titleRow.style.display = 'block';
+  } else {
+    titleRow.style.display = 'none';
+  }
   document.getElementById('pdRelationship').innerText = lead.relationship || '-';
 
   const websiteLink = document.getElementById('pdWebsiteLink');
@@ -3042,13 +3451,12 @@ function renderPersonalEmailComposers() {
       const body = bodyEl.value.trim();
       if (!subject && !body) return;
       const text = subject ? `Subject: ${subject}\n\n${body}` : body;
-      navigator.clipboard.writeText(text).then(() => {
-        const btn = e.currentTarget;
-        const orig = btn.innerText;
-        btn.classList.add('copied');
-        btn.innerText = 'Copied!';
-        setTimeout(() => { btn.classList.remove('copied'); btn.innerText = orig; }, 2000);
-      });
+      navigator.clipboard.writeText(text);
+      const btn = e.currentTarget;
+      const orig = btn.innerText;
+      btn.classList.add('copied');
+      btn.innerText = 'Copied!';
+      setTimeout(() => { btn.classList.remove('copied'); btn.innerText = orig; }, 2000);
     });
 
     // Remove button (emails 2+)
@@ -3210,6 +3618,17 @@ function processPersonalCSVContent(content, fileName) {
     let dupeCount = 0;
     let skippedCount = 0;
 
+    // Snapshot batch state once before the loop so it doesn't shift as we push new leads
+    const campaignName = normalizeCampaignName(activeCampaign) || 'Personal';
+    ensureCampaignExists(campaignName);
+    const batchSize = parseInt(document.getElementById('personalBatchSizeInput')?.value || 40);
+    const existingBatchLeads = personalLeads.filter(
+      l => (l.campaign || 'Personal') === campaignName && l.source === 'batch' && l.batch
+    );
+    const startingMaxBatch = existingBatchLeads.length > 0 ? Math.max(...existingBatchLeads.map(l => l.batch)) : 0;
+    const startingCountInLastBatch = existingBatchLeads.filter(l => l.batch === startingMaxBatch).length;
+    const slotsAlreadyFilled = startingMaxBatch > 0 ? startingCountInLastBatch : 0;
+
     r.data.forEach((row, rowIndex) => {
       const R = {};
       Object.keys(row).forEach(k => { R[k.toLowerCase().trim()] = (row[k] || '').trim(); });
@@ -3234,16 +3653,16 @@ function processPersonalCSVContent(content, fileName) {
       const company = companyRaw.replace(/^www\./i, '').trim() || 'Unknown Company';
       const relationship = pick('relationship_context', 'relationship', 'context', 'notes', 'note') || `Imported from ${fileName}`;
       const contactTitle = pick('title', 'job_title', 'job title', 'person title', 'position', 'role', 'person_title', 'primary_contact_title', 'founder_title');
+      const countryVal = pick('country', 'Country', 'person country', 'company country', 'location');
 
       emails.forEach((email, emailIndex) => {
         const exists = personalLeads.some(l => normalizeEmail(l.contactEmail) === normalizeEmail(email));
         if (exists) { dupeCount++; return; }
-        const campaignName = normalizeCampaignName(activeCampaign) || 'Personal';
-        ensureCampaignExists(campaignName);
-        const existingBatches = personalLeads
-          .filter(l => (l.campaign || 'Personal') === campaignName && l.source === 'batch' && l.batch)
-          .map(l => l.batch);
-        const batchNum = existingBatches.length > 0 ? Math.max(...existingBatches) : 0;
+        const effectiveIndex = slotsAlreadyFilled + addedCount;
+        const batchNum = startingMaxBatch > 0
+          ? startingMaxBatch + Math.floor(effectiveIndex / batchSize)
+          : Math.floor(addedCount / batchSize) + 1;
+        const roleDetection = detectRoleForMode(contactTitle, currentPersonalMode);
         personalLeads.push({
           id: `${Date.now()}-${rowIndex}-${emailIndex}`,
           company,
@@ -3252,9 +3671,16 @@ function processPersonalCSVContent(content, fileName) {
           contactEmail: email,
           website,
           relationship,
+          country: countryVal,
+          personalMode: currentPersonalMode,
+          role: roleDetection.role,
+          roleSource: roleDetection.roleSource,
+          matchedKeywords: roleDetection.matchedKeywords,
+          originalTitle: roleDetection.originalTitle,
+          roleManuallySet: false,
           status: 'Draft',
           source: 'batch',
-          batch: batchNum + 1,
+          batch: batchNum,
           emails: [{ subject: '', body: '' }],
           websiteContext: '',
           campaign: campaignName,
@@ -3337,6 +3763,7 @@ document.getElementById('savePersonalLeadBtn').onclick = () => {
   }
   const campaignName = normalizeCampaignName(activeCampaign) || 'Personal';
   ensureCampaignExists(campaignName);
+  const singleRoleDetection = detectRole(null);
   personalLeads.push({
     id: Date.now().toString(),
     company,
@@ -3344,6 +3771,12 @@ document.getElementById('savePersonalLeadBtn').onclick = () => {
     contactEmail,
     website: document.getElementById('plWebsite').value.trim(),
     relationship,
+    personalMode: currentPersonalMode,
+    role: singleRoleDetection.role,
+    roleSource: singleRoleDetection.roleSource,
+    matchedKeywords: singleRoleDetection.matchedKeywords,
+    originalTitle: singleRoleDetection.originalTitle,
+    roleManuallySet: false,
     status: 'Draft',
     source: 'manual',
     emails: [{ subject: '', body: '' }],
@@ -3358,7 +3791,10 @@ document.getElementById('savePersonalLeadBtn').onclick = () => {
 };
 
 document.getElementById('exportPersonalBtn').onclick = async () => {
-  const inCampaign = personalLeads.filter(l => (l.campaign || 'Personal') === activeCampaign);
+  const inCampaign = personalLeads.filter(l =>
+    (l.campaign || 'Personal') === activeCampaign &&
+    (l.personalMode || 'ui-ux') === currentPersonalMode
+  );
   const statusFilter = document.getElementById('personalStatusFilter').value;
   const search = (document.getElementById('personalSearchInput').value || '').toLowerCase();
   const exportable = inCampaign.filter(l => {

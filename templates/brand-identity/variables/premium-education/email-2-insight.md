@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that hesitation in premium education usually isn't a content problem. Institutions publish plenty. It's that the brand sounds like every other premium school, so families end up doing the trust-building work themselves and reducing the choice to rankings and fees.

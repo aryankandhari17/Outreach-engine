@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that most marketplace profiles are designed like resumes: credentials, ratings, past jobs. But customers aren't hiring an employee, they're letting a stranger into their home. The trust signals that actually move the booking are about behaviour: how quickly they reply, how they communicate, whether they feel like a real person.

@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that most D2C pages aren't broken, they're just out of order. People don't read top to bottom, they scan, and most pages don't earn confidence in the order people actually look. So the click lands, but the buy doesn't follow.

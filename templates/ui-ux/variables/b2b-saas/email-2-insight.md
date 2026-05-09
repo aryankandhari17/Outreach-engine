@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that SaaS products evolve fast. Positioning shifts, new features ship, and the technology underneath gets more capable. But the way users experience the product often doesn't move at the same pace, so a more capable product can still feel harder to adopt than it should be. That gap is where signups turn into non-usage and the product doesn't get a fair chance to prove itself.

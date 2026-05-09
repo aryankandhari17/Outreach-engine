@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that direct bookings in hospitality usually don't lose to OTAs because of price. They lose because the hotel's own brand world feels lighter than the property itself. Guests can't pre-feel the stay, so they default to the platform that makes deciding easiest.

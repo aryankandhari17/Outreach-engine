@@ -168,6 +168,13 @@ ipcMain.handle('state:load', async () => {
   return null;
 });
 
+ipcMain.handle('templates:readFile', async (event, relativePath) => {
+  const safeRel = String(relativePath || '').replace(/\.\./g, '').replace(/^[\\/]/, '');
+  const fullPath = path.join(__dirname, 'templates', safeRel);
+  if (!fs.existsSync(fullPath)) return null;
+  return fs.readFileSync(fullPath, 'utf-8');
+});
+
 function normalizeTargetUrl(urlStr) {
   let target = String(urlStr || '').trim();
   if (!target.startsWith('http')) target = 'https://' + target;

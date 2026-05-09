@@ -1,1 +1,1 @@
-<!-- TODO: Add content -->
+The reason I asked is that healthtech apps usually show information correctly, but not always reassuringly. There's a real difference between a page that's medically accurate and one that makes a worried person feel held. Most products optimise for the first and assume the second.
